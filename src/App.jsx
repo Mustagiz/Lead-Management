@@ -595,6 +595,8 @@ const EmployeeDashboard = () => {
         setOnBreak(false);
         setBreakStartTime(null);
         setCurrentBreakDuration(0);
+      } else {
+        alert('Error saving break end: ' + error.message);
       }
     } else {
       // Start break
@@ -610,6 +612,8 @@ const EmployeeDashboard = () => {
       if (!error) {
         setOnBreak(true);
         setBreakStartTime(new Date(now).getTime());
+      } else {
+        alert('Error starting break: ' + error.message);
       }
     }
   };
@@ -2134,6 +2138,9 @@ const AdminDashboard = () => {
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   });
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [showBulkDeleteLeadsConfirm, setShowBulkDeleteLeadsConfirm] = useState(false);
+  const [allBreaks, setAllBreaks] = useState([]);
 
   const formatTime = (ts) => {
     const h = Math.floor(ts / 3600);
@@ -2144,17 +2151,37 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(() => {
+      fetchCurrentBreaks();
+    }, 30000); // 30s refresh for monitoring
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchCurrentBreaks = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data: breaksData } = await supabase
+      .from('breaks_monitoring')
+      .select('*')
+      .eq('date', today);
+    setAllBreaks(breaksData || []);
+  };
 
   const loadData = async () => {
     const { data: leadsData } = await supabase.from('leads').select('*');
     const { data: usersData } = await supabase.from('profiles').select('*');
     const { data: campaignsData } = await supabase.from('campaigns').select('*');
 
+    const today = new Date().toISOString().split('T')[0];
+    const { data: breaksData } = await supabase
+      .from('breaks_monitoring')
+      .select('*')
+      .eq('date', today);
+
     setLeads(leadsData || []);
     setFilteredLeads(leadsData || []);
     setUsers(usersData || []);
     setCampaigns(campaignsData || []);
+    setAllBreaks(breaksData || []);
 
     setStats({
       totalLeads: (leadsData || []).length,
@@ -2197,6 +2224,35 @@ const AdminDashboard = () => {
 
   const handleSelectUser = (userId) => {
     setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  };
+
+  const handleSelectAllLeads = (e) => {
+    if (e.target.checked) {
+      setSelectedLeads(paginatedLeads.map(l => l.id));
+    } else {
+      setSelectedLeads([]);
+    }
+  };
+
+  const handleSelectLead = (leadId) => {
+    setSelectedLeads(prev =>
+      prev.includes(leadId) ? prev.filter(id => id !== leadId) : [...prev, leadId]
+    );
+  };
+
+  const confirmBulkDeleteLeads = async () => {
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .in('id', selectedLeads);
+
+    if (!error) {
+      loadData();
+      setSelectedLeads([]);
+      setShowBulkDeleteLeadsConfirm(false);
+    } else {
+      alert('Error deleting leads: ' + error.message);
+    }
   };
 
   const confirmBulkDeleteUsers = async () => {
@@ -2596,11 +2652,33 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
+          {/* Bulk Actions */}
+          {selectedLeads.length > 0 && (
+            <Card className="p-4 bg-indigo-50 border-indigo-200 mb-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-indigo-900">
+                  {selectedLeads.length} lead(s) selected
+                </p>
+                <Button variant="danger" onClick={() => setShowBulkDeleteLeadsConfirm(true)}>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
+            </Card>
+          )}
+
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
                   <tr>
+                    <th className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        onChange={handleSelectAllLeads}
+                        checked={selectedLeads.length === paginatedLeads.length && paginatedLeads.length > 0}
+                      />
+                    </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
@@ -2613,6 +2691,13 @@ const AdminDashboard = () => {
                 <tbody className="divide-y divide-gray-200">
                   {paginatedLeads.map(lead => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.includes(lead.id)}
+                          onChange={() => handleSelectLead(lead.id)}
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
@@ -2686,6 +2771,25 @@ const AdminDashboard = () => {
               employeeId={'admin'}
               employeeName={'Admin'}
             />
+          )}
+          {/* Bulk Delete Confirmation Modal */}
+          {showBulkDeleteLeadsConfirm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+              <Card className="w-full max-w-md p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Bulk Delete</h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete these {selectedLeads.length} leads? This action cannot be undone.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <Button variant="secondary" onClick={() => setShowBulkDeleteLeadsConfirm(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant="danger" onClick={confirmBulkDeleteLeads}>
+                    Delete Selected
+                  </Button>
+                </div>
+              </Card>
+            </div>
           )}
         </div>
       )}
@@ -2860,17 +2964,12 @@ const AdminDashboard = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {users.filter(u => u.role === 'employee').map(user => {
-                  // Since we are in a loop inside a component, and we don't have a global "all breaks" state yet,
-                  // we would ideally fetch this in loadData. 
-                  // For now, I'll simplify line 2627-2633 to use default values or fetch them in AdminDashboard loadData.
-                  // Let's assume stats or a new state `allBreaks` exists.
-                  // To fix the crash quickly, I'll use placeholders or an empty object.
-                  const userBreakRecord = {
+                  const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
                     total_break_seconds: 0,
                     current_break_start: null,
                     breaks: []
                   };
-                  const isOnBreak = userBreakRecord.current_break_start;
+                  const isOnBreak = !!userBreakRecord.current_break_start;
                   const totalSecs = userBreakRecord.total_break_seconds || 0;
 
                   return (
@@ -2883,12 +2982,7 @@ const AdminDashboard = () => {
                               On Break
                             </span>
                             <span className="text-[10px] text-purple-600 mt-1 font-mono">
-                              Duration: {(() => {
-                                const elapsed = Math.floor((Date.now() - userBreakRecord.currentBreakStart) / 1000);
-                                const mm = Math.floor(elapsed / 60);
-                                const ss = (elapsed % 60).toString().padStart(2, '0');
-                                return `${mm}:${ss}`;
-                              })()}
+                              Start: {new Date(userBreakRecord.current_break_start).toLocaleTimeString()}
                             </span>
                           </div>
                         ) : (
