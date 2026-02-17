@@ -206,13 +206,12 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (isRegister) {
-      // const { register } = useAuth(); // Moved to component level
-      const result = register(formData);
+      const result = await register(formData);
       if (result.success) {
         setIsRegister(false);
         setFormData({ username: '', password: '', name: '' });
@@ -221,7 +220,7 @@ const LoginPage = () => {
         setError(result.error);
       }
     } else {
-      const result = login(formData.username, formData.password);
+      const result = await login(formData.username, formData.password);
       if (!result.success) {
         setError(result.error);
       }
@@ -3279,6 +3278,28 @@ const App = () => {
           <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Check if Supabase initialized correctly
+  const isSupabaseReady = process.env.REACT_APP_SUPABASE_URL && process.env.REACT_APP_SUPABASE_URL.startsWith('https://');
+
+  if (!isSupabaseReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
+        <Card className="max-w-md p-8 border-red-200">
+          <h2 className="text-xl font-bold text-red-700 mb-4">Configuration Error</h2>
+          <p className="text-gray-700 mb-4">
+            The Supabase URL is missing or invalid. Please check your Vercel Environment Variables.
+          </p>
+          <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4">
+            REACT_APP_SUPABASE_URL={process.env.REACT_APP_SUPABASE_URL || 'missing'}
+          </div>
+          <p className="text-sm text-gray-500">
+            Ensure you've added <strong>REACT_APP_SUPABASE_URL</strong> and <strong>REACT_APP_SUPABASE_ANON_KEY</strong> to your Vercel project settings.
+          </p>
+        </Card>
       </div>
     );
   }
