@@ -303,12 +303,12 @@ const LoginPage = () => {
           )}
 
           <Input
-            label="Username"
-            type="text"
+            label="Email"
+            type="email"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             required
-            placeholder="Enter your username"
+            placeholder="Enter your email"
           />
 
           <div className="relative">
