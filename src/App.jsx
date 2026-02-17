@@ -3325,10 +3325,10 @@ const App = () => {
   }
 
   // Check if Supabase initialized correctly
-  const url = process.env.REACT_APP_SUPABASE_URL || '';
-  const key = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+  const url = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  const key = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
   const isSupabaseReady = url && url.startsWith('https://');
-  const isKeyValid = key && (key.startsWith('eyJ') || key.length > 50); // Supabase keys are long JWTs
+  const isKeyValid = key && (key.startsWith('eyJ') || key.length > 50);
 
   if (!isSupabaseReady || !isKeyValid) {
     return (
@@ -3338,14 +3338,17 @@ const App = () => {
           <p className="text-gray-700 mb-4">
             {!isSupabaseReady
               ? 'The Supabase URL is missing or invalid.'
-              : 'The Supabase Anon Key looks incorrect (expected a long string starting with "eyJ").'}
+              : 'The Supabase Anon Key looks incorrect.'}
           </p>
-          <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4 overflow-auto max-h-20">
-            URL: {url || 'MISSING'}<br />
-            Key: {key ? (key.substring(0, 5) + '...') : 'MISSING'}
+          <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4 overflow-auto max-h-40">
+            Detected URL: {url ? (url.substring(0, 15) + '...') : 'MISSING'}<br />
+            Detected Key: {key ? (key.substring(0, 5) + '...') : 'MISSING'}<br />
+            <br />
+            Available REACT_APP_ keys:<br />
+            {Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')).join(', ') || 'NONE'}
           </div>
           <p className="text-sm text-gray-500">
-            Please check your Vercel Environment Variables. Prefix them with <strong>REACT_APP_</strong>.
+            Ensure you added variables to Vercel and then <strong>Redeployed</strong>.
           </p>
         </Card>
       </div>
