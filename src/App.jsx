@@ -2181,14 +2181,6 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  const fetchCurrentBreaks = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const { data: breaksData } = await supabase
-      .from('breaks_monitoring')
-      .select('*')
-      .eq('date', today);
-    setAllBreaks(breaksData || []);
-  };
 
   const loadData = async () => {
     const { data: leadsData } = await supabase.from('leads').select('*');
