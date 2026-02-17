@@ -474,12 +474,12 @@ const EmployeeDashboard = () => {
 
     const rows = leadsToDownload.map(lead => {
       let customDetails = '';
-      if (lead.campaign && lead.customQuestionResponses) {
+      if (lead.campaign && lead.custom_question_responses) {
         const campaignObj = campaigns.find(c => c.name === lead.campaign);
-        if (campaignObj && campaignObj.customQuestions) {
-          customDetails = campaignObj.customQuestions
+        if (campaignObj && campaignObj.custom_questions) {
+          customDetails = campaignObj.custom_questions
             .map(q => {
-              const answer = lead.customQuestionResponses[q.id];
+              const answer = lead.custom_question_responses[q.id];
               return answer ? `${q.question}: ${answer}` : null;
             })
             .filter(Boolean)
@@ -489,36 +489,36 @@ const EmployeeDashboard = () => {
 
       return [
         lead.date,
-        lead.raName,
+        lead.ra_name,
         lead.campaign || '',
-        lead.companyName,
+        lead.company_name,
         lead.salutation,
-        lead.firstName,
-        lead.lastName,
+        lead.first_name,
+        lead.last_name,
         lead.email,
         lead.domain,
-        lead.jobTitle,
+        lead.job_title,
         lead.department,
-        lead.jobLevel,
-        lead.jobTitleLink,
-        lead.phoneNo,
-        lead.directDial,
+        lead.job_level,
+        lead.job_title_link,
+        lead.phone_no,
+        lead.direct_dial,
         lead.address1,
         lead.city,
         lead.state,
-        lead.zipCode,
+        lead.zip_code,
         lead.country,
-        lead.industryType,
-        lead.industryTypeLink,
-        lead.employeeSize,
-        lead.associatedMembers || '',
-        lead.employeeSizeLink,
-        lead.revenueSize || '',
-        lead.revenueSizeLink || '',
+        lead.industry_type,
+        lead.industry_type_link,
+        lead.employee_size,
+        lead.associated_members || '',
+        lead.employee_size_link,
+        lead.revenue_size || '',
+        lead.revenue_size_link || '',
         lead.tenure || '',
-        lead.vvStatus || '',
+        lead.vv_status || '',
         lead.status,
-        lead.raComments,
+        lead.ra_comments,
         customDetails
       ];
     });
@@ -1702,36 +1702,36 @@ const QADashboard = () => {
 
     const rows = filteredLeads.map(lead => [
       lead.date,
-      lead.raName,
+      lead.ra_name,
       lead.campaign || '',
-      lead.companyName,
+      lead.company_name,
       lead.salutation,
-      lead.firstName,
-      lead.lastName,
+      lead.first_name,
+      lead.last_name,
       lead.email,
       lead.domain,
-      lead.jobTitle,
+      lead.job_title,
       lead.department,
-      lead.jobLevel,
-      lead.jobTitleLink,
-      lead.phoneNo,
-      lead.directDial,
+      lead.job_level,
+      lead.job_title_link,
+      lead.phone_no,
+      lead.direct_dial,
       lead.address1,
       lead.city,
       lead.state,
-      lead.zipCode,
+      lead.zip_code,
       lead.country,
-      lead.industryType,
-      lead.industryTypeLink,
-      lead.employeeSize,
-      lead.associatedMembers || '',
-      lead.employeeSizeLink,
-      lead.revenueSize || '',
-      lead.revenueSizeLink || '',
+      lead.industry_type,
+      lead.industry_type_link,
+      lead.employee_size,
+      lead.associated_members || '',
+      lead.employee_size_link,
+      lead.revenue_size || '',
+      lead.revenue_size_link || '',
       lead.tenure || '',
-      lead.vvStatus || '',
+      lead.vv_status || '',
       lead.status,
-      lead.raComments
+      lead.ra_comments
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(e => e.map(item => `"${(item || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
@@ -2263,12 +2263,12 @@ const AdminDashboard = () => {
 
     const rows = leadsToDownload.map(lead => {
       let customDetails = '';
-      if (lead.campaign && lead.customQuestionResponses) {
+      if (lead.campaign && lead.custom_question_responses) {
         const campaignObj = campaigns.find(c => c.name === lead.campaign);
-        if (campaignObj && campaignObj.customQuestions) {
-          customDetails = campaignObj.customQuestions
+        if (campaignObj && campaignObj.custom_questions) {
+          customDetails = campaignObj.custom_questions
             .map(q => {
-              const answer = lead.customQuestionResponses[q.id];
+              const answer = lead.custom_question_responses[q.id];
               return answer ? `${q.question}: ${answer}` : null;
             })
             .filter(Boolean)
@@ -2278,36 +2278,36 @@ const AdminDashboard = () => {
 
       return [
         lead.date,
-        lead.raName,
+        lead.ra_name,
         lead.campaign || '',
-        lead.companyName,
+        lead.company_name,
         lead.salutation,
-        lead.firstName,
-        lead.lastName,
+        lead.first_name,
+        lead.last_name,
         lead.email,
         lead.domain,
-        lead.jobTitle,
+        lead.job_title,
         lead.department,
-        lead.jobLevel,
-        lead.jobTitleLink,
-        lead.phoneNo,
-        lead.directDial,
+        lead.job_level,
+        lead.job_title_link,
+        lead.phone_no,
+        lead.direct_dial,
         lead.address1,
         lead.city,
         lead.state,
-        lead.zipCode,
+        lead.zip_code,
         lead.country,
-        lead.industryType,
-        lead.industryTypeLink,
-        lead.employeeSize,
-        lead.associatedMembers || '',
-        lead.employeeSizeLink,
-        lead.revenueSize || '',
-        lead.revenueSizeLink || '',
+        lead.industry_type,
+        lead.industry_type_link,
+        lead.employee_size,
+        lead.associated_members || '',
+        lead.employee_size_link,
+        lead.revenue_size || '',
+        lead.revenue_size_link || '',
         lead.tenure || '',
-        lead.vvStatus || '',
+        lead.vv_status || '',
         lead.status,
-        lead.raComments,
+        lead.ra_comments,
         customDetails
       ];
     });
