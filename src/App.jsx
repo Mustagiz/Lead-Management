@@ -2853,6 +2853,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
   const [formData, setFormData] = useState(
     user ? { ...user } : { name: '', username: '', password: '', role: 'employee' }
   );
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register } = useAuth();
 
@@ -2926,13 +2927,22 @@ const UserModal = ({ user, onClose, onSuccess }) => {
           />
 
           {!user && (
-            <Input
-              label="Password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-            />
+            <div className="relative">
+              <Input
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           )}
 
           <Select
