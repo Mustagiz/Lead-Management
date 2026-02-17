@@ -2875,7 +2875,16 @@ const UserModal = ({ user, onClose, onSuccess }) => {
       }
     } else {
       // Add new user via Auth
-      const result = await register(formData);
+      // Enforce @ovmkr.site domain if not present
+      let finalEmail = formData.username.trim();
+      if (!finalEmail.includes('@')) {
+        finalEmail = `${finalEmail}@ovmkr.site`;
+      }
+
+      const result = await register({
+        ...formData,
+        username: finalEmail
+      });
       if (!result.success) {
         alert('Error adding user: ' + result.error);
         return;
@@ -2909,7 +2918,8 @@ const UserModal = ({ user, onClose, onSuccess }) => {
           />
 
           <Input
-            label="Username"
+            label="Email"
+            placeholder="username@ovmkr.site"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             required
