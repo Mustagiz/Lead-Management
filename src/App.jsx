@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Camera, Upload, Download, Users, BarChart3, Shield, LogOut, Filter, Check, X, Edit, Trash2, RefreshCw, Clock, CheckCircle, XCircle, Search, Plus, Eye, EyeOff, ChevronDown, Coffee, Key } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 // Context for Authentication
 const AuthContext = createContext();
@@ -10,26 +11,15 @@ const useAuth = () => {
   return context;
 };
 
-// Mock Data Storage (In production, replace with actual backend API)
-const STORAGE_KEY = 'leadManagementData';
-
-const getStoredData = () => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : {
-    users: [
-      { id: 1, username: 'admin', password: 'admin123', role: 'admin', name: 'Admin User' },
-      { id: 2, username: 'employee1', password: 'emp123', role: 'employee', name: 'John Doe' },
-      { id: 3, username: 'qa1', password: 'qa123', role: 'qa', name: 'Jane Smith' }
-    ],
-    leads: [],
-    auditLog: [],
-    campaigns: [],
-    breaks: {} // { [userId]: { [date]: { totalBreakSeconds, currentBreakStart, breaks: [] } } }
-  };
-};
-
-const saveData = (data) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+// Supabase Helper Functions
+const getProfile = async (userId) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  if (error) return null;
+  return data;
 };
 
 // Authentication Provider
@@ -38,43 +28,62 @@ const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        fetchProfile(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = (username, password) => {
-    const data = getStoredData();
-    const user = data.users.find(u => u.username === username && u.password === password);
-    if (user) {
-      const userInfo = { ...user, password: undefined };
-      setCurrentUser(userInfo);
-      localStorage.setItem('currentUser', JSON.stringify(userInfo));
-      return { success: true };
+  const fetchProfile = async (userId) => {
+    const profile = await getProfile(userId);
+    if (profile) {
+      setCurrentUser(profile);
     }
-    return { success: false, error: 'Invalid credentials' };
+    setIsLoading(false);
   };
 
-  const logout = () => {
+  const login = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
   };
 
-  const register = (userData) => {
-    const data = getStoredData();
-    const existingUser = data.users.find(u => u.username === userData.username);
-    if (existingUser) {
-      return { success: false, error: 'Username already exists' };
-    }
-    const newUser = {
-      id: data.users.length + 1,
-      ...userData,
-      role: 'employee'
-    };
-    data.users.push(newUser);
-    saveData(data);
+  const register = async (userData) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: userData.username, // Using email as username
+      password: userData.password,
+      options: {
+        data: {
+          full_name: userData.name,
+          role: userData.role || 'employee'
+        }
+      }
+    });
+    if (error) return { success: false, error: error.message };
     return { success: true };
   };
 
@@ -351,12 +360,25 @@ const EmployeeDashboard = () => {
     return () => clearInterval(interval);
   }, [onBreak, breakStartTime]);
 
-  const loadLeads = () => {
-    const data = getStoredData();
-    const userLeads = data.leads.filter(lead => lead.employeeId === currentUser.id);
+  const loadLeads = async () => {
+    const { data: userLeads, error } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('employee_id', currentUser.id);
+
+    if (error) {
+      console.error('Error loading leads:', error);
+      return;
+    }
+
     setLeads(userLeads);
     setFilteredLeads(userLeads);
-    setCampaigns(data.campaigns || []);
+
+    const { data: campaignsData } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('is_active', true);
+    setCampaigns(campaignsData || []);
 
     const qualified = userLeads.filter(l => l.status === 'qualified').length;
     const disqualified = userLeads.filter(l => l.status === 'disqualified').length;
@@ -474,69 +496,81 @@ const EmployeeDashboard = () => {
     URL.revokeObjectURL(url);
   };
 
-  const loadBreakData = () => {
+  const loadBreakData = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const data = getStoredData();
-    const userBreaks = (data.breaks && data.breaks[currentUser.id] && data.breaks[currentUser.id][today]) || {
-      totalBreakSeconds: 0,
-      currentBreakStart: null,
-      breaks: []
-    };
+    const { data: userBreaks, error } = await supabase
+      .from('breaks_monitoring')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('date', today)
+      .maybeSingle();
 
-    setTotalBreakTime(userBreaks.totalBreakSeconds || (userBreaks.totalBreakMinutes * 60) || 0);
-    setBreakHistory(userBreaks.breaks);
-    if (userBreaks.currentBreakStart) {
-      setOnBreak(true);
-      setBreakStartTime(userBreaks.currentBreakStart);
+    if (error) {
+      console.error('Error loading break data:', error);
+      return;
+    }
+
+    if (userBreaks) {
+      setTotalBreakTime(userBreaks.total_break_seconds || 0);
+      setBreakHistory(userBreaks.breaks || []);
+      if (userBreaks.current_break_start) {
+        setOnBreak(true);
+        setBreakStartTime(new Date(userBreaks.current_break_start).getTime());
+      }
+    } else {
+      setTotalBreakTime(0);
+      setBreakHistory([]);
+      setOnBreak(false);
+      setBreakStartTime(null);
     }
   };
 
-  const handleBreakToggle = () => {
+  const handleBreakToggle = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const data = getStoredData();
-
-    if (!data.breaks) data.breaks = {};
-    if (!data.breaks[currentUser.id]) data.breaks[currentUser.id] = {};
-    if (!data.breaks[currentUser.id][today]) {
-      data.breaks[currentUser.id][today] = {
-        totalBreakMinutes: 0,
-        currentBreakStart: null,
-        breaks: []
-      };
-    }
-
-    const userBreaks = data.breaks[currentUser.id][today];
 
     if (onBreak) {
       // End break
       const durationSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
       const newTotal = totalBreakTime + durationSeconds;
-
-      userBreaks.totalBreakSeconds = newTotal;
-      userBreaks.currentBreakStart = null;
-      userBreaks.breaks.push({
+      const newBreak = {
         startTime: new Date(breakStartTime).toISOString(),
         endTime: new Date().toISOString(),
         durationSeconds: durationSeconds,
         duration: Math.floor(durationSeconds / 60)
-      });
+      };
 
-      saveData(data);
-      setTotalBreakTime(newTotal);
-      setBreakHistory(userBreaks.breaks);
-      setOnBreak(false);
-      setBreakStartTime(null);
-      setCurrentBreakDuration(0);
+      const { error } = await supabase
+        .from('breaks_monitoring')
+        .update({
+          total_break_seconds: newTotal,
+          current_break_start: null,
+          breaks: [...breakHistory, newBreak]
+        })
+        .eq('user_id', currentUser.id)
+        .eq('date', today);
+
+      if (!error) {
+        setTotalBreakTime(newTotal);
+        setBreakHistory([...breakHistory, newBreak]);
+        setOnBreak(false);
+        setBreakStartTime(null);
+        setCurrentBreakDuration(0);
+      }
     } else {
       // Start break
-      const now = Date.now();
-      if (!userBreaks.totalBreakSeconds) {
-        userBreaks.totalBreakSeconds = userBreaks.totalBreakMinutes ? userBreaks.totalBreakMinutes * 60 : 0;
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('breaks_monitoring')
+        .upsert({
+          user_id: currentUser.id,
+          date: today,
+          current_break_start: now
+        }, { onConflict: 'user_id,date' });
+
+      if (!error) {
+        setOnBreak(true);
+        setBreakStartTime(new Date(now).getTime());
       }
-      userBreaks.currentBreakStart = now;
-      saveData(data);
-      setOnBreak(true);
-      setBreakStartTime(now);
     }
   };
 
@@ -902,9 +936,16 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   const vvStatusOptions = ['RPC Verified', 'RPC Voice Mail', 'Dail by Name', 'Operator Verified', 'Company Verified'];
 
   useEffect(() => {
-    const data = getStoredData();
-    const activeCampaigns = data.campaigns.filter(c => c.isActive);
-    setCampaigns(activeCampaigns);
+    const fetchCampaigns = async () => {
+      const { data: activeCampaigns, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('is_active', true);
+      if (!error) {
+        setCampaigns(activeCampaigns);
+      }
+    };
+    fetchCampaigns();
   }, []);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -924,30 +965,40 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
       return;
     }
 
-    const data = getStoredData();
-
-    if (leadToEdit) {
-      // Update existing lead
-      const leadIndex = data.leads.findIndex(l => l.id === leadToEdit.id);
-      if (leadIndex !== -1) {
-        data.leads[leadIndex] = { ...data.leads[leadIndex], ...formData };
+    const submitData = async () => {
+      if (leadToEdit) {
+        // Update existing lead
+        const { error } = await supabase
+          .from('leads')
+          .update(formData)
+          .eq('id', leadToEdit.id);
+        if (error) {
+          alert('Error updating lead: ' + error.message);
+          return;
+        }
+      } else {
+        // Create new lead
+        const newLead = {
+          date: new Date().toISOString().split('T')[0],
+          ra_name: employeeName,
+          employee_id: employeeId,
+          status: 'pending',
+          ...formData
+        };
+        const { error } = await supabase
+          .from('leads')
+          .insert(newLead);
+        if (error) {
+          alert('Error creating lead: ' + error.message);
+          return;
+        }
       }
-    } else {
-      // Create new lead
-      const newLead = {
-        id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        raName: employeeName,
-        employeeId: employeeId,
-        status: 'pending',
-        ...formData
-      };
-      data.leads.push(newLead);
-    }
 
-    saveData(data);
-    onSuccess();
-    onClose();
+      onSuccess();
+      onClose();
+    };
+
+    submitData();
   };
 
   // Function to download CSV template
@@ -1017,123 +1068,85 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
       const text = event.target.result;
       const rows = text.split(/\r?\n/).filter(row => row.trim());
       const data = getStoredData();
-      let importedCount = 0;
-      let skippedCount = 0;
+      const processRows = async () => {
+        const standardHeaders = ['Current Date', 'RA Name', 'Campaign', 'Company Name', 'Salutation', 'First Name', 'Last Name', 'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link', 'Phone No', 'Direct Dial', 'Address 1', 'City', 'State', 'Zip Code', 'Country', 'Industry Type', 'Industry Type Link', 'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue Size', 'Revenue Size Link', 'Tenure', 'VV Status', 'RA Comments'];
 
-      if (rows.length < 2) {
-        alert('CSV file is empty or missing headers');
-        return;
-      }
+        let importedCount = 0;
+        let skippedCount = 0;
+        const newLeads = [];
 
-      // Parse headers
-      const headers = parseCSVLine(rows[0]).map(h => h.trim().toLowerCase());
-      const headerMap = headers.reduce((acc, curr, index) => {
-        acc[curr] = index;
-        return acc;
-      }, {});
+        for (let i = 1; i < rows.length; i++) {
+          const columns = parseCSVLine(rows[i]).map(col => col.trim());
+          const companyName = getValue(columns, 'Company Name') || getValue(columns, 'Company');
 
-      // Helper to safely get value by header name
-      const getValue = (cols, fieldName) => {
-        const index = headerMap[fieldName.toLowerCase()];
-        return (index !== undefined && cols[index]) ? cols[index] : '';
-      };
-
-      const normalizeDate = (dateStr) => {
-        if (!dateStr) return new Date().toISOString().split('T')[0];
-        // Handle MM/DD/YYYY or DD/MM/YYYY to YYYY-MM-DD
-        const parts = dateStr.includes('/') ? dateStr.split('/') : dateStr.includes('-') ? dateStr.split('-') : [];
-        if (parts.length === 3) {
-          // Assumption: If first part is > 12, it's DD/MM/YYYY, otherwise ambiguous but likely MM/DD/YYYY (US standard) or YYYY-MM-DD
-          if (parts[0].length === 4) return dateStr; // Already YYYY-MM-DD
-          const num1 = parseInt(parts[0], 10);
-          const num2 = parseInt(parts[1], 10);
-          const num3 = parseInt(parts[2], 10);
-
-          // Construct YYYY-MM-DD
-          // If year is last (common in Excel CSV)
-          if (parts[2].length === 4) {
-            // MM/DD/YYYY or DD/MM/YYYY
-            // Simple heuristic: if num1 > 12, it must be Day.
-            if (num1 > 12) {
-              return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          if (companyName) {
+            const campaignName = getValue(columns, 'Campaign');
+            const customQuestionResponses = {};
+            if (campaignName) {
+              const campaignObj = campaigns.find(c => c.name === campaignName);
+              if (campaignObj && campaignObj.customQuestions) {
+                campaignObj.customQuestions.forEach(q => {
+                  const answer = getValue(columns, q.question);
+                  if (answer) customQuestionResponses[q.id] = answer;
+                });
+              }
             }
-            return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+
+            newLeads.push({
+              date: normalizeDate(getValue(columns, 'Current Date') || getValue(columns, 'Date')),
+              ra_name: getValue(columns, 'RA Name') || employeeName,
+              employee_id: employeeId,
+              status: 'pending',
+              campaign: campaignName,
+              company_name: companyName,
+              salutation: getValue(columns, 'Salutation') || 'Mr.',
+              first_name: getValue(columns, 'First Name'),
+              last_name: getValue(columns, 'Last Name'),
+              email: getValue(columns, 'Email'),
+              domain: getValue(columns, 'Domain'),
+              job_title: getValue(columns, 'Job Title'),
+              department: getValue(columns, 'Department') || 'Marketing',
+              job_level: getValue(columns, 'Job Level') || 'Mid-level',
+              job_title_link: getValue(columns, 'Job Title Link'),
+              phone_no: getValue(columns, 'Phone No') || getValue(columns, 'Phone'),
+              direct_dial: getValue(columns, 'Direct Dial'),
+              address1: getValue(columns, 'Address 1') || getValue(columns, 'Address'),
+              city: getValue(columns, 'City'),
+              state: getValue(columns, 'State'),
+              zip_code: getValue(columns, 'Zip Code') || getValue(columns, 'Zip'),
+              country: getValue(columns, 'Country') || 'United States',
+              industry_type: getValue(columns, 'Industry Type') || 'Technology',
+              industry_type_link: getValue(columns, 'Industry Type Link'),
+              employee_size: getValue(columns, 'Employee Size') || '1-10',
+              associated_members: getValue(columns, 'Associated Members'),
+              employee_size_link: getValue(columns, 'Employee Size Link'),
+              revenue_size: getValue(columns, 'Revenue Size'),
+              revenue_size_link: getValue(columns, 'Revenue Size Link'),
+              tenure: getValue(columns, 'Tenure'),
+              vv_status: getValue(columns, 'VV Status') || 'RPC Verified',
+              ra_comments: getValue(columns, 'RA Comments'),
+              custom_question_responses: customQuestionResponses
+            });
+            importedCount++;
+          } else {
+            skippedCount++;
           }
         }
-        return dateStr;
+
+        if (newLeads.length > 0) {
+          const { error } = await supabase.from('leads').insert(newLeads);
+          if (error) {
+            alert('Error importing leads: ' + error.message);
+            return;
+          }
+        }
+
+        alert(`Successfully uploaded ${importedCount} leads.${skippedCount > 0 ? ` Skipped ${skippedCount} rows due to missing Company Name.` : ''}`);
+        onSuccess();
+        onClose();
       };
 
-      // Skip header row
-      for (let i = 1; i < rows.length; i++) {
-        // Handle CSV parsing considering quoted values
-        const columns = parseCSVLine(rows[i]).map(col => col.trim());
-
-        const companyName = getValue(columns, 'Company Name') || getValue(columns, 'Company'); // Support both
-
-        if (companyName) { // Basic validation
-          const campaignName = getValue(columns, 'Campaign');
-
-          // Handle Custom Questions extraction
-          const customQuestionResponses = {};
-          if (campaignName) {
-            const campaignObj = campaigns.find(c => c.name === campaignName);
-            if (campaignObj && campaignObj.customQuestions) {
-              campaignObj.customQuestions.forEach(q => {
-                const answer = getValue(columns, q.question);
-                if (answer) {
-                  customQuestionResponses[q.id] = answer;
-                }
-              });
-            }
-          }
-
-          const newLead = {
-            id: Date.now() + i + Math.floor(Math.random() * 1000),
-            date: normalizeDate(getValue(columns, 'Current Date') || getValue(columns, 'Date')),
-            raName: getValue(columns, 'RA Name') || employeeName,
-            employeeId: employeeId,
-            status: 'pending',
-            campaign: campaignName,
-            companyName: companyName,
-            salutation: getValue(columns, 'Salutation') || 'Mr.',
-            firstName: getValue(columns, 'First Name'),
-            lastName: getValue(columns, 'Last Name'),
-            email: getValue(columns, 'Email'),
-            domain: getValue(columns, 'Domain'),
-            jobTitle: getValue(columns, 'Job Title'),
-            department: getValue(columns, 'Department') || 'Marketing',
-            jobLevel: getValue(columns, 'Job Level') || 'Mid-level',
-            jobTitleLink: getValue(columns, 'Job Title Link'),
-            phoneNo: getValue(columns, 'Phone No') || getValue(columns, 'Phone'),
-            directDial: getValue(columns, 'Direct Dial'),
-            address1: getValue(columns, 'Address 1') || getValue(columns, 'Address'),
-            city: getValue(columns, 'City'),
-            state: getValue(columns, 'State'),
-            zipCode: getValue(columns, 'Zip Code') || getValue(columns, 'Zip'),
-            country: getValue(columns, 'Country') || 'United States',
-            industryType: getValue(columns, 'Industry Type') || 'Technology',
-            industryTypeLink: getValue(columns, 'Industry Type Link'),
-            employeeSize: getValue(columns, 'Employee Size') || '1-10',
-            associatedMembers: getValue(columns, 'Associated Members'),
-            employeeSizeLink: getValue(columns, 'Employee Size Link'),
-            revenueSize: getValue(columns, 'Revenue Size'),
-            revenueSizeLink: getValue(columns, 'Revenue Size Link'),
-            tenure: getValue(columns, 'Tenure'),
-            vvStatus: getValue(columns, 'VV Status') || 'RPC Verified',
-            raComments: getValue(columns, 'RA Comments'),
-            customQuestionResponses: customQuestionResponses
-          };
-          data.leads.push(newLead);
-          importedCount++;
-        } else {
-          skippedCount++;
-        }
-      }
-
-      saveData(data);
-      alert(`Successfully uploaded ${importedCount} leads.${skippedCount > 0 ? ` Skipped ${skippedCount} rows due to missing Company Name.` : ''}`);
-      onSuccess();
-      onClose();
+      processRows();
     };
     reader.readAsText(csvFile);
   };
@@ -1456,18 +1469,34 @@ const QADashboard = () => {
     loadLeads();
   }, []);
 
-  const loadLeads = () => {
-    const data = getStoredData();
-    setLeads(data.leads);
-    setFilteredLeads(data.leads);
-    setActiveCampaigns((data.campaigns || []).filter(c => c.isActive));
+  const loadLeads = async () => {
+    const { data: leadsData, error: leadsError } = await supabase
+      .from('leads')
+      .select('*');
 
-    const auditLog = data.auditLog.filter(log => log.qaId === currentUser.id);
-    setStats({
-      audited: auditLog.length,
-      qualified: auditLog.filter(l => l.action === 'qualified').length,
-      disqualified: auditLog.filter(l => l.action === 'disqualified').length
-    });
+    if (!leadsError) {
+      setLeads(leadsData);
+      setFilteredLeads(leadsData);
+    }
+
+    const { data: campaignsData } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('is_active', true);
+    setActiveCampaigns(campaignsData || []);
+
+    const { data: auditLog, error: auditError } = await supabase
+      .from('audit_log')
+      .select('*')
+      .eq('qa_id', currentUser.id);
+
+    if (!auditError) {
+      setStats({
+        audited: auditLog.length,
+        qualified: auditLog.filter(l => l.action === 'qualified').length,
+        disqualified: auditLog.filter(l => l.action === 'disqualified').length
+      });
+    }
   };
 
   const applyFilters = () => {
@@ -1496,30 +1525,31 @@ const QADashboard = () => {
     setCurrentPage(1);
   };
 
-  const handleQualify = (leadId, status) => {
+  const handleQualify = async (leadId, status) => {
     if (!isClockedIn) {
       alert('Please clock in first!');
       return;
     }
 
-    const data = getStoredData();
-    const leadIndex = data.leads.findIndex(l => l.id === leadId);
-    if (leadIndex !== -1) {
-      data.leads[leadIndex].status = status;
-      data.auditLog.push({
-        id: Date.now(),
-        leadId,
-        qaId: currentUser.id,
-        qaName: currentUser.name,
-        action: status,
-        timestamp: new Date().toISOString()
+    const { error: updateError } = await supabase
+      .from('leads')
+      .update({ status })
+      .eq('id', leadId);
+
+    if (!updateError) {
+      await supabase.from('audit_log').insert({
+        lead_id: leadId,
+        qa_id: currentUser.id,
+        qa_name: currentUser.name,
+        action: status
       });
-      saveData(data);
       loadLeads();
+    } else {
+      alert('Error updating lead: ' + updateError.message);
     }
   };
 
-  const handleBulkAudit = (status) => {
+  const handleBulkAudit = async (status) => {
     if (!isClockedIn) {
       alert('Please clock in first!');
       return;
@@ -1530,24 +1560,25 @@ const QADashboard = () => {
       return;
     }
 
-    const data = getStoredData();
-    selectedLeads.forEach(leadId => {
-      const leadIndex = data.leads.findIndex(l => l.id === leadId);
-      if (leadIndex !== -1) {
-        data.leads[leadIndex].status = status;
-        data.auditLog.push({
-          id: Date.now() + Math.random(),
-          leadId,
-          qaId: currentUser.id,
-          qaName: currentUser.name,
-          action: status,
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
-    saveData(data);
-    setSelectedLeads([]);
-    loadLeads();
+    const { error: updateError } = await supabase
+      .from('leads')
+      .update({ status })
+      .in('id', selectedLeads);
+
+    if (!updateError) {
+      const logs = selectedLeads.map(leadId => ({
+        lead_id: leadId,
+        qa_id: currentUser.id,
+        qa_name: currentUser.name,
+        action: status
+      }));
+
+      await supabase.from('audit_log').insert(logs);
+      setSelectedLeads([]);
+      loadLeads();
+    } else {
+      alert('Error in bulk audit: ' + updateError.message);
+    }
   };
 
   const downloadLeads = () => {
@@ -1851,13 +1882,23 @@ const QADashboard = () => {
 
 // Admin Break History Modal
 const AdminBreakHistoryModal = ({ user, onClose }) => {
+  const [breakData, setBreakData] = useState({ total_break_seconds: 0, breaks: [] });
   const today = new Date().toISOString().split('T')[0];
-  const data = getStoredData();
-  const userBreaks = (data.breaks && data.breaks[user.id] && data.breaks[user.id][today]) || {
-    totalBreakSeconds: 0,
-    totalBreakMinutes: 0,
-    breaks: []
-  };
+
+  useEffect(() => {
+    const fetchBreaks = async () => {
+      const { data, error } = await supabase
+        .from('breaks_monitoring')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .maybeSingle();
+      if (!error && data) {
+        setBreakData(data);
+      }
+    };
+    fetchBreaks();
+  }, [user.id, today]);
 
   const formatTime = (totalSeconds) => {
     const hrs = Math.floor(totalSeconds / 3600);
@@ -1866,7 +1907,7 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
     return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(hrs > 0 ? 2 : 1, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const totalSecs = userBreaks.totalBreakSeconds || (userBreaks.totalBreakMinutes * 60) || 0;
+  const totalSecs = breakData.total_break_seconds || 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
@@ -1904,7 +1945,7 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {userBreaks.breaks.map((b, i) => (
+              {breakData.breaks.map((b, i) => (
                 <tr key={i} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm">{i + 1}</td>
                   <td className="px-4 py-3 text-sm">{new Date(b.startTime).toLocaleTimeString()}</td>
@@ -1916,7 +1957,7 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
                   </td>
                 </tr>
               ))}
-              {userBreaks.breaks.length === 0 && (
+              {breakData.breaks.length === 0 && (
                 <tr>
                   <td colSpan="4" className="px-4 py-8 text-center text-gray-500">No breaks taken today.</td>
                 </tr>
@@ -1960,22 +2001,25 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const loadData = () => {
-    const data = getStoredData();
-    setLeads(data.leads);
-    setFilteredLeads(data.leads);
-    setUsers(data.users);
-    setCampaigns(data.campaigns || []);
+  const loadData = async () => {
+    const { data: leadsData } = await supabase.from('leads').select('*');
+    const { data: usersData } = await supabase.from('profiles').select('*');
+    const { data: campaignsData } = await supabase.from('campaigns').select('*');
+
+    setLeads(leadsData || []);
+    setFilteredLeads(leadsData || []);
+    setUsers(usersData || []);
+    setCampaigns(campaignsData || []);
 
     setStats({
-      totalLeads: data.leads.length,
-      totalUsers: data.users.length,
-      qualified: data.leads.filter(l => l.status === 'qualified').length,
-      disqualified: data.leads.filter(l => l.status === 'disqualified').length,
-      employees: data.users.filter(u => u.role === 'employee').length,
-      qaUsers: data.users.filter(u => u.role === 'qa').length,
-      totalCampaigns: (data.campaigns || []).length,
-      activeCampaigns: (data.campaigns || []).filter(c => c.isActive).length
+      totalLeads: (leadsData || []).length,
+      totalUsers: (usersData || []).length,
+      qualified: (leadsData || []).filter(l => l.status === 'qualified').length,
+      disqualified: (leadsData || []).filter(l => l.status === 'disqualified').length,
+      employees: (usersData || []).filter(u => u.role === 'employee').length,
+      qaUsers: (usersData || []).filter(u => u.role === 'qa').length,
+      totalCampaigns: (campaignsData || []).length,
+      activeCampaigns: (campaignsData || []).filter(c => c.isActive).length
     });
   };
 
@@ -1983,12 +2027,18 @@ const AdminDashboard = () => {
     setDeleteConfirmation({ isOpen: true, userId: user.id, userName: user.name });
   };
 
-  const confirmDeleteUser = () => {
-    const data = getStoredData();
-    data.users = data.users.filter(u => u.id !== deleteConfirmation.userId);
-    saveData(data);
-    loadData();
-    setDeleteConfirmation({ isOpen: false, userId: null, userName: '' });
+  const confirmDeleteUser = async () => {
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', deleteConfirmation.userId);
+
+    if (!error) {
+      loadData();
+      setDeleteConfirmation({ isOpen: false, userId: null, userName: '' });
+    } else {
+      alert('Error deleting user profile: ' + error.message);
+    }
   };
 
   const handleSelectAllUsers = (e) => {
@@ -2035,12 +2085,14 @@ const AdminDashboard = () => {
     }
   };
 
-  const toggleCampaignStatus = (campaignId) => {
-    const data = getStoredData();
-    const campaignIndex = data.campaigns.findIndex(c => c.id === campaignId);
-    if (campaignIndex !== -1) {
-      data.campaigns[campaignIndex].isActive = !data.campaigns[campaignIndex].isActive;
-      saveData(data);
+  const toggleCampaignStatus = async (campaignId) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    const { error } = await supabase
+      .from('campaigns')
+      .update({ is_active: !campaign.is_active })
+      .eq('id', campaignId);
+
+    if (!error) {
       loadData();
     }
   };
@@ -2732,26 +2784,34 @@ const UserModal = ({ user, onClose, onSuccess }) => {
     user ? { ...user } : { name: '', username: '', password: '', role: 'employee' }
   );
 
-  const handleSubmit = (e) => {
+  const { register } = useAuth();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = getStoredData();
 
     if (user) {
-      // Edit existing user
-      const userIndex = data.users.findIndex(u => u.id === user.id);
-      if (userIndex !== -1) {
-        data.users[userIndex] = { ...data.users[userIndex], ...formData };
+      // Edit existing user profile
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: formData.name,
+          role: formData.role
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        alert('Error updating profile: ' + error.message);
+        return;
       }
     } else {
-      // Add new user
-      const newUser = {
-        id: data.users.length + 1,
-        ...formData
-      };
-      data.users.push(newUser);
+      // Add new user via Auth
+      const result = await register(formData);
+      if (!result.success) {
+        alert('Error adding user: ' + result.error);
+        return;
+      }
     }
 
-    saveData(data);
     onSuccess();
     onClose();
   };
@@ -2854,28 +2914,43 @@ const CampaignModal = ({ campaign, onClose, onSuccess }) => {
     campaign ? { ...campaign } : { name: '', description: '', isActive: true, customQuestions: [] }
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = getStoredData();
 
     if (campaign) {
       // Edit existing campaign
-      const campaignIndex = data.campaigns.findIndex(c => c.id === campaign.id);
-      if (campaignIndex !== -1) {
-        data.campaigns[campaignIndex] = { ...data.campaigns[campaignIndex], ...formData };
+      const { error } = await supabase
+        .from('campaigns')
+        .update({
+          name: formData.name,
+          description: formData.description,
+          is_active: formData.isActive,
+          custom_questions: formData.customQuestions
+        })
+        .eq('id', campaign.id);
+
+      if (error) {
+        alert('Error updating campaign: ' + error.message);
+        return;
       }
     } else {
       // Add new campaign
-      const newCampaign = {
-        id: Date.now(),
-        ...formData,
-        createdBy: currentUser.name,
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      data.campaigns.push(newCampaign);
+      const { error } = await supabase
+        .from('campaigns')
+        .insert({
+          name: formData.name,
+          description: formData.description,
+          is_active: formData.isActive,
+          custom_questions: formData.customQuestions,
+          created_by: currentUser.name
+        });
+
+      if (error) {
+        alert('Error creating campaign: ' + error.message);
+        return;
+      }
     }
 
-    saveData(data);
     onSuccess();
     onClose();
   };
@@ -2986,7 +3061,7 @@ const ChangePasswordModal = ({ user, onClose }) => {
   const [error, setError] = useState('');
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -2995,26 +3070,21 @@ const ChangePasswordModal = ({ user, onClose }) => {
       return;
     }
 
-    if (formData.newPassword.length < 4) {
-      setError("Password must be at least 4 characters");
+    if (formData.newPassword.length < 6) {
+      setError("Password must be at least 6 characters (Supabase requirement)");
       return;
     }
 
-    const data = getStoredData();
-    const userIndex = data.users.findIndex(u => u.id === user.id);
+    // Supabase updateUser only updates the current user's password
+    const { error } = await supabase.auth.updateUser({
+      password: formData.newPassword
+    });
 
-    if (userIndex !== -1) {
-      if (data.users[userIndex].password !== formData.currentPassword) {
-        setError("Incorrect current password");
-        return;
-      }
-
-      data.users[userIndex].password = formData.newPassword;
-      saveData(data);
+    if (error) {
+      setError(error.message);
+    } else {
       alert('Password changed successfully');
       onClose();
-    } else {
-      setError("User not found");
     }
   };
 
