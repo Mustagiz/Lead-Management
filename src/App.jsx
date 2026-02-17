@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Camera, Upload, Download, Users, BarChart3, Shield, LogOut, Filter, Check, X, Edit, Trash2, RefreshCw, Clock, CheckCircle, XCircle, Search, Plus, Eye, EyeOff, ChevronDown, Coffee, Key } from 'lucide-react';
+import { Upload, Download, Users, BarChart3, Shield, LogOut, Filter, Check, X, Edit, Trash2, RefreshCw, Clock, CheckCircle, XCircle, Search, Plus, Eye, EyeOff, ChevronDown, Coffee, Key } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 // Context for Authentication
@@ -59,7 +59,7 @@ const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -73,7 +73,7 @@ const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: userData.username, // Using email as username
       password: userData.password,
       options: {
@@ -332,14 +332,12 @@ const EmployeeDashboard = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadType, setUploadType] = useState('single');
   const [stats, setStats] = useState({ total: 0, qualified: 0, disqualified: 0, pending: 0 });
   const [onBreak, setOnBreak] = useState(false);
   const [breakStartTime, setBreakStartTime] = useState(null);
   const [totalBreakTime, setTotalBreakTime] = useState(0);
   const [currentBreakDuration, setCurrentBreakDuration] = useState(0);
   const [breakHistory, setBreakHistory] = useState([]);
-  const [showBreakHistory, setShowBreakHistory] = useState(false);
   const [activeTab, setActiveTab] = useState('leads');
 
   const LEADS_PER_PAGE = 10;
@@ -347,6 +345,7 @@ const EmployeeDashboard = () => {
   useEffect(() => {
     loadLeads();
     loadBreakData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   useEffect(() => {
@@ -559,7 +558,7 @@ const EmployeeDashboard = () => {
     } else {
       // Start break
       const now = new Date().toISOString();
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('breaks_monitoring')
         .upsert({
           user_id: currentUser.id,
@@ -1096,7 +1095,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           }
           return dateStr;
         };
-        const standardHeaders = ['Current Date', 'RA Name', 'Campaign', 'Company Name', 'Salutation', 'First Name', 'Last Name', 'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link', 'Phone No', 'Direct Dial', 'Address 1', 'City', 'State', 'Zip Code', 'Country', 'Industry Type', 'Industry Type Link', 'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue Size', 'Revenue Size Link', 'Tenure', 'VV Status', 'RA Comments'];
 
         let importedCount = 0;
         let skippedCount = 0;
@@ -1494,6 +1492,7 @@ const QADashboard = () => {
 
   useEffect(() => {
     loadLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadLeads = async () => {
@@ -2018,14 +2017,11 @@ const AdminDashboard = () => {
   const [showAdminBreakHistory, setShowAdminBreakHistory] = useState(false);
   const [selectedUserForBreaks, setSelectedUserForBreaks] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, userId: null, userName: '' });
-  const [tick, setTick] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadData = async () => {
@@ -2652,7 +2648,6 @@ const AdminDashboard = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {users.filter(u => u.role === 'employee').map(user => {
-                  const today = new Date().toISOString().split('T')[0];
                   // Since we are in a loop inside a component, and we don't have a global "all breaks" state yet,
                   // we would ideally fetch this in loadData. 
                   // For now, I'll simplify line 2627-2633 to use default values or fetch them in AdminDashboard loadData.
