@@ -2140,6 +2140,8 @@ const AdminDashboard = () => {
   });
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [showBulkDeleteLeadsConfirm, setShowBulkDeleteLeadsConfirm] = useState(false);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+  const [bulkEditForm, setBulkEditForm] = useState({ status: '', campaign: '' });
   const [allBreaks, setAllBreaks] = useState([]);
 
   const formatTime = (ts) => {
@@ -2269,6 +2271,31 @@ const AdminDashboard = () => {
       setShowBulkDeleteLeadsConfirm(false);
     } else {
       alert('Error deleting leads: ' + error.message);
+    }
+  };
+
+  const handleBulkUpdateLeads = async () => {
+    if (!bulkEditForm.status && !bulkEditForm.campaign) {
+      alert('Please select at least one property to update.');
+      return;
+    }
+
+    const updates = {};
+    if (bulkEditForm.status) updates.status = bulkEditForm.status;
+    if (bulkEditForm.campaign) updates.campaign = bulkEditForm.campaign;
+
+    const { error } = await supabase
+      .from('leads')
+      .update(updates)
+      .in('id', selectedLeads);
+
+    if (!error) {
+      loadData();
+      setSelectedLeads([]);
+      setShowBulkEditModal(false);
+      setBulkEditForm({ status: '', campaign: '' });
+    } else {
+      alert('Error updating leads: ' + error.message);
     }
   };
 
@@ -2689,11 +2716,15 @@ const AdminDashboard = () => {
 
           {/* Bulk Actions */}
           {selectedLeads.length > 0 && (
-            <Card className="p-4 bg-indigo-50 border-indigo-200 mb-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-indigo-900">
-                  {selectedLeads.length} lead(s) selected
-                </p>
+            <Card className="p-4 bg-indigo-50 border-indigo-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+              <p className="text-sm font-semibold text-indigo-900">
+                {selectedLeads.length} lead(s) selected
+              </p>
+              <div className="flex gap-2">
+                <Button variant="primary" onClick={() => setShowBulkEditModal(true)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Modify Selected
+                </Button>
                 <Button variant="danger" onClick={() => setShowBulkDeleteLeadsConfirm(true)}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Selected
@@ -2948,6 +2979,55 @@ const AdminDashboard = () => {
             title="Bulk Delete Users"
             message={`Are you sure you want to delete ${selectedUsers.length} selected users? This action cannot be undone.`}
           />
+
+          {showBulkEditModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+              <Card className="w-full max-w-md p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-gray-900">Modify {selectedLeads.length} Leads</h3>
+                  <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">New Status</label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      value={bulkEditForm.status}
+                      onChange={(e) => setBulkEditForm({ ...bulkEditForm, status: e.target.value })}
+                    >
+                      <option value="">No Change</option>
+                      <option value="pending">Pending</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="disqualified">Disqualified</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">New Campaign</label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      value={bulkEditForm.campaign}
+                      onChange={(e) => setBulkEditForm({ ...bulkEditForm, campaign: e.target.value })}
+                    >
+                      <option value="">No Change</option>
+                      {campaigns.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-8">
+                  <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" onClick={handleBulkUpdateLeads}>
+                    Apply Changes
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
         </>
       )}
 
