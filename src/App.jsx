@@ -960,6 +960,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     }
   );
   const [csvFile, setCsvFile] = useState(null);
+  const [selectedBulkCampaign, setSelectedBulkCampaign] = useState('');
   const [errors, setErrors] = useState({});
   const [campaigns, setCampaigns] = useState([]);
 
@@ -1052,21 +1053,29 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
       'Revenue Size Link', 'Tenure', 'VV Status', 'RA Comments'
     ];
 
-    // Collect all unique custom questions from active campaigns
-    const allCustomQuestions = new Set();
-    campaigns.forEach(c => {
-      if (c.isActive && c.customQuestions) {
-        c.customQuestions.forEach(q => allCustomQuestions.add(q.question));
-      }
-    });
+    let headers = [...standardHeaders];
 
-    const headers = [...standardHeaders, ...Array.from(allCustomQuestions)];
+    if (selectedBulkCampaign) {
+      const campaignObj = campaigns.find(c => c.name === selectedBulkCampaign);
+      if (campaignObj && campaignObj.custom_questions) {
+        campaignObj.custom_questions.forEach(q => headers.push(q.question));
+      }
+    } else {
+      // Collect all unique custom questions from active campaigns if no campaign selected
+      const allCustomQuestions = new Set();
+      campaigns.forEach(c => {
+        if (c.is_active && c.custom_questions) {
+          c.custom_questions.forEach(q => allCustomQuestions.add(q.question));
+        }
+      });
+      headers = [...headers, ...Array.from(allCustomQuestions)];
+    }
 
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "lead_upload_template.csv");
+    link.setAttribute("download", selectedBulkCampaign ? `template_${selectedBulkCampaign.replace(/\s+/g, '_')}.csv` : "lead_upload_template.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1147,7 +1156,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           const companyName = getValue(columns, 'Company Name') || getValue(columns, 'Company');
 
           if (companyName) {
-            const rawCampaignName = getValue(columns, 'Campaign');
+            const rawCampaignName = selectedBulkCampaign || getValue(columns, 'Campaign');
             let campaignName = null;
             const customQuestionResponses = {};
 
@@ -1159,8 +1168,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
               if (campaignObj) {
                 campaignName = campaignObj.name; // Use exact name from DB
-                if (campaignObj.customQuestions) {
-                  campaignObj.customQuestions.forEach(q => {
+                if (campaignObj.custom_questions) {
+                  campaignObj.custom_questions.forEach(q => {
                     const answer = getValue(columns, q.question);
                     if (answer) customQuestionResponses[q.id] = answer;
                   });
@@ -1494,6 +1503,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             </form>
           ) : (
             <form onSubmit={handleBulkUpload}>
+              <div className="mb-6">
+                <Select
+                  label="Select Campaign for these Leads"
+                  value={selectedBulkCampaign}
+                  onChange={(e) => setSelectedBulkCampaign(e.target.value)}
+                  options={[
+                    { value: '', label: '-- Use Campaign Names from CSV --' },
+                    ...campaigns.map(c => ({ value: c.name, label: c.name }))
+                  ]}
+                />
+                <p className="mt-1 text-xs text-gray-500 italic">
+                  * If selected, this will apply to ALL leads in the CSV.
+                </p>
+              </div>
+
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-4">Upload CSV file with leads</p>
@@ -1510,10 +1534,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     className="text-sm text-indigo-600 hover:text-indigo-800 font-medium underline flex items-center justify-center gap-1"
                   >
                     <Download className="w-4 h-4" />
-                    Download CSV Template
+                    {selectedBulkCampaign ? `Download Template for ${selectedBulkCampaign}` : 'Download Standard CSV Template'}
                   </button>
                   <p className="text-xs text-gray-500">
-                    Includes all fields: Campaign, Company, Contact Info, Job Details, Revenue, VV Status, etc.
+                    {selectedBulkCampaign
+                      ? `Template includes standard fields + custom questions for ${selectedBulkCampaign}.`
+                      : 'Includes all fields: Campaign, Company, Contact Info, Revenue, etc.'}
                   </p>
                 </div>
               </div>
