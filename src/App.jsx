@@ -2967,6 +2967,36 @@ const AdminDashboard = () => {
             <p className="text-sm text-gray-600">Monitor all agents' current break status and total break time for today.</p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50/50 border-b border-gray-200">
+            <Card className="p-4 bg-white border-indigo-100 flex items-center gap-4">
+              <div className="p-3 bg-indigo-50 rounded-lg">
+                <Users className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Agents</p>
+                <p className="text-2xl font-bold text-indigo-900">{users.filter(u => u.role === 'employee').length}</p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border-green-100 flex items-center gap-4">
+              <div className="p-3 bg-green-50 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Today</p>
+                <p className="text-2xl font-bold text-green-900">{allBreaks.length}</p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border-purple-100 flex items-center gap-4">
+              <div className="p-3 bg-purple-50 rounded-lg">
+                <Coffee className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">On Break Now</p>
+                <p className="text-2xl font-bold text-purple-900">{allBreaks.filter(b => b.current_break_start).length}</p>
+              </div>
+            </Card>
+          </div>
+
           <div className="p-6 bg-white border-b border-gray-200">
             <div className="flex flex-col md:flex-row gap-4 items-end">
               <div className="flex-1">
