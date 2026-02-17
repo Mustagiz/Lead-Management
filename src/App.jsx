@@ -724,7 +724,7 @@ const EmployeeDashboard = () => {
                 value={filters.campaign}
                 onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
                 placeholder="Search campaign..."
-                options={campaigns.filter(c => c.isActive).map(c => ({ value: c.name, label: c.name }))}
+                options={campaigns.filter(c => c.is_active).map(c => ({ value: c.name, label: c.name }))}
               />
               <div className="flex items-end pb-4 gap-2">
                 <Button
@@ -780,12 +780,12 @@ const EmployeeDashboard = () => {
                   {paginatedLeads.map((lead, index) => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.companyName}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {lead.salutation} {lead.firstName} {lead.lastName}
+                        {lead.salutation} {lead.first_name} {lead.last_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.jobTitle}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.job_title}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
                           lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
@@ -929,34 +929,34 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   const [formData, setFormData] = useState(
     leadToEdit ? { ...leadToEdit } : {
       campaign: '',
-      companyName: '',
+      company_name: '',
       salutation: 'Mr.',
-      firstName: '',
-      lastName: '',
+      first_name: '',
+      last_name: '',
       email: '',
       domain: '',
-      jobTitle: '',
+      job_title: '',
       department: 'Marketing',
-      jobLevel: 'Mid-level',
-      jobTitleLink: '',
-      phoneNo: '',
-      directDial: '',
+      job_level: 'Mid-level',
+      job_title_link: '',
+      phone_no: '',
+      direct_dial: '',
       address1: '',
       city: '',
       state: '',
-      zipCode: '',
+      zip_code: '',
       country: 'United States',
-      industryType: 'Technology',
-      industryTypeLink: '',
-      employeeSize: '1-10',
-      employeeSizeLink: '',
-      associatedMembers: '',
-      revenueSize: '',
-      revenueSizeLink: '',
+      industry_type: 'Technology',
+      industry_type_link: '',
+      employee_size: '1-10',
+      employee_size_link: '',
+      associated_members: '',
+      revenue_size: '',
+      revenue_size_link: '',
       tenure: '',
-      vvStatus: 'RPC Verified',
-      raComments: '',
-      customQuestionResponses: {}
+      vv_status: 'RPC Verified',
+      ra_comments: '',
+      custom_question_responses: {}
     }
   );
   const [csvFile, setCsvFile] = useState(null);
@@ -998,8 +998,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     if (!formData.email || !validateEmail(formData.email)) {
       newErrors.email = 'Valid email is required';
     }
-    if (!formData.companyName) newErrors.companyName = 'Company name is required';
-    if (!formData.firstName) newErrors.firstName = 'First name is required';
+    if (!formData.company_name) newErrors.company_name = 'Company name is required';
+    if (!formData.first_name) newErrors.first_name = 'First name is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -1121,10 +1121,11 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         text = text.substring(1);
       }
 
-      // Split rows and filter out truly empty ones (including rows that are just commas)
+      // Split rows and filter out truly empty ones (including rows that are just commas, quotes, or whitespace)
       const rows = text.split(/\r?\n/).filter(row => {
         const trimmed = row.trim();
-        return trimmed && trimmed.replace(/,/g, '').length > 0;
+        // Regex matches any row that ONLY contains whitespace, commas, or double quotes
+        return trimmed && trimmed.replace(/[\s,"]/g, '').length > 0;
       });
 
       if (rows.length < 2) {
@@ -1321,9 +1322,9 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                 <Input
                   label="Company Name *"
-                  value={formData.companyName}
-                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  error={errors.companyName}
+                  value={formData.company_name}
+                  onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                  error={errors.company_name}
                   required
                 />
 
@@ -1342,16 +1343,16 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                 <Input
                   label="First Name *"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  error={errors.firstName}
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  error={errors.first_name}
                   required
                 />
 
                 <Input
                   label="Last Name"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                 />
 
                 <Input
@@ -1371,8 +1372,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                 <Input
                   label="Job Title"
-                  value={formData.jobTitle}
-                  onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                  value={formData.job_title}
+                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
                 />
 
                 <Select
@@ -1384,15 +1385,15 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                 <Select
                   label="Job Level"
-                  value={formData.jobLevel}
-                  onChange={(e) => setFormData({ ...formData, jobLevel: e.target.value })}
+                  value={formData.job_level}
+                  onChange={(e) => setFormData({ ...formData, job_level: e.target.value })}
                   options={jobLevels.map(l => ({ value: l, label: l }))}
                 />
 
                 <Input
                   label="Phone Number"
-                  value={formData.phoneNo}
-                  onChange={(e) => setFormData({ ...formData, phoneNo: e.target.value })}
+                  value={formData.phone_no}
+                  onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
                   placeholder="+1-123-456-7890"
                 />
 
@@ -1417,50 +1418,50 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                 <Select
                   label="Industry Type"
-                  value={formData.industryType}
-                  onChange={(e) => setFormData({ ...formData, industryType: e.target.value })}
+                  value={formData.industry_type}
+                  onChange={(e) => setFormData({ ...formData, industry_type: e.target.value })}
                   options={industries.map(i => ({ value: i, label: i }))}
                 />
 
                 <Input
                   label="Industry Type Link"
-                  value={formData.industryTypeLink}
-                  onChange={(e) => setFormData({ ...formData, industryTypeLink: e.target.value })}
+                  value={formData.industry_type_link}
+                  onChange={(e) => setFormData({ ...formData, industry_type_link: e.target.value })}
                   placeholder="https://example.com"
                 />
 
                 <Select
                   label="Employee Size"
-                  value={formData.employeeSize}
-                  onChange={(e) => setFormData({ ...formData, employeeSize: e.target.value })}
+                  value={formData.employee_size}
+                  onChange={(e) => setFormData({ ...formData, employee_size: e.target.value })}
                   options={employeeSizes.map(s => ({ value: s, label: s }))}
                 />
 
                 <Input
                   label="Associated Members"
-                  value={formData.associatedMembers}
-                  onChange={(e) => setFormData({ ...formData, associatedMembers: e.target.value })}
+                  value={formData.associated_members}
+                  onChange={(e) => setFormData({ ...formData, associated_members: e.target.value })}
                   placeholder="Enter Associated Members"
                 />
 
                 <Input
                   label="Employee Size Link"
-                  value={formData.employeeSizeLink}
-                  onChange={(e) => setFormData({ ...formData, employeeSizeLink: e.target.value })}
+                  value={formData.employee_size_link}
+                  onChange={(e) => setFormData({ ...formData, employee_size_link: e.target.value })}
                   placeholder="https://example.com"
                 />
 
                 <Input
                   label="Revenue Size"
-                  value={formData.revenueSize}
-                  onChange={(e) => setFormData({ ...formData, revenueSize: e.target.value })}
+                  value={formData.revenue_size}
+                  onChange={(e) => setFormData({ ...formData, revenue_size: e.target.value })}
                   placeholder="e.g., $1M - $10M"
                 />
 
                 <Input
                   label="Revenue Size Link"
-                  value={formData.revenueSizeLink}
-                  onChange={(e) => setFormData({ ...formData, revenueSizeLink: e.target.value })}
+                  value={formData.revenue_size_link}
+                  onChange={(e) => setFormData({ ...formData, revenue_size_link: e.target.value })}
                   placeholder="https://example.com"
                 />
 
@@ -1473,8 +1474,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                 <Select
                   label="VV STATUS"
-                  value={formData.vvStatus}
-                  onChange={(e) => setFormData({ ...formData, vvStatus: e.target.value })}
+                  value={formData.vv_status}
+                  onChange={(e) => setFormData({ ...formData, vv_status: e.target.value })}
                   options={vvStatusOptions.map(s => ({ value: s, label: s }))}
                 />
               </div>
@@ -1482,8 +1483,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
               <div className="mt-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">RA Comments</label>
                 <textarea
-                  value={formData.raComments}
-                  onChange={(e) => setFormData({ ...formData, raComments: e.target.value })}
+                  value={formData.ra_comments}
+                  onChange={(e) => setFormData({ ...formData, ra_comments: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   rows="3"
                   placeholder="Add any comments or notes..."
@@ -1491,20 +1492,20 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
               </div>
 
               {/* Custom Questions Display */}
-              {formData.campaign && campaigns.find(c => c.name === formData.campaign)?.customQuestions?.length > 0 && (
+              {formData.campaign && campaigns.find(c => c.name === formData.campaign)?.custom_questions?.length > 0 && (
                 <div className="mt-6 border-t pt-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {campaigns.find(c => c.name === formData.campaign).customQuestions.map((q) => (
+                    {campaigns.find(c => c.name === formData.campaign).custom_questions.map((q) => (
                       <div key={q.id} className="md:col-span-2">
                         <Input
                           label={q.question}
-                          value={formData.customQuestionResponses?.[q.id] || ''}
+                          value={formData.custom_question_responses?.[q.id] || ''}
                           onChange={(e) => {
                             setFormData({
                               ...formData,
-                              customQuestionResponses: {
-                                ...formData.customQuestionResponses,
+                              custom_question_responses: {
+                                ...formData.custom_question_responses,
                                 [q.id]: e.target.value
                               }
                             });
@@ -1645,7 +1646,7 @@ const QADashboard = () => {
       filtered = filtered.filter(lead => lead.date <= filters.endDate);
     }
     if (filters.agent) {
-      filtered = filtered.filter(lead => lead.raName.toLowerCase().includes(filters.agent.toLowerCase()));
+      filtered = filtered.filter(lead => (lead.ra_name || '').toLowerCase().includes(filters.agent.toLowerCase()));
     }
     if (filters.campaign) {
       filtered = filtered.filter(lead => (lead.campaign || '').toLowerCase().includes(filters.campaign.toLowerCase()));
@@ -1947,10 +1948,10 @@ const QADashboard = () => {
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.raName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.companyName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {lead.firstName} {lead.lastName}
+                    {lead.first_name} {lead.last_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -2163,7 +2164,7 @@ const AdminDashboard = () => {
       employees: (usersData || []).filter(u => u.role === 'employee').length,
       qaUsers: (usersData || []).filter(u => u.role === 'qa').length,
       totalCampaigns: (campaignsData || []).length,
-      activeCampaigns: (campaignsData || []).filter(c => c.isActive).length
+      activeCampaigns: (campaignsData || []).filter(c => c.is_active).length
     });
   };
 
@@ -2254,7 +2255,7 @@ const AdminDashboard = () => {
       filtered = filtered.filter(lead => lead.date <= filters.endDate);
     }
     if (filters.agent) {
-      filtered = filtered.filter(lead => lead.raName.toLowerCase().includes(filters.agent.toLowerCase()));
+      filtered = filtered.filter(lead => (lead.ra_name || '').toLowerCase().includes(filters.agent.toLowerCase()));
     }
     if (filters.campaign) {
       filtered = filtered.filter(lead => (lead.campaign || '').toLowerCase().includes(filters.campaign.toLowerCase()));
@@ -2567,7 +2568,7 @@ const AdminDashboard = () => {
                 value={filters.campaign}
                 onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
                 placeholder="Search campaign..."
-                options={campaigns.filter(c => c.isActive).map(c => ({ value: c.name, label: c.name }))}
+                options={campaigns.filter(c => c.is_active).map(c => ({ value: c.name, label: c.name }))}
               />
               <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1">
                 <Button
@@ -2613,10 +2614,10 @@ const AdminDashboard = () => {
                   {paginatedLeads.map(lead => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.raName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.companyName}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {lead.firstName} {lead.lastName}
+                        {lead.first_name} {lead.last_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -2672,8 +2673,8 @@ const AdminDashboard = () => {
             <UploadLeadModal
               onClose={() => { setShowEditLeadModal(false); setEditingLead(null); }}
               onSuccess={() => { loadData(); setShowEditLeadModal(false); setEditingLead(null); }}
-              employeeId={editingLead?.employeeId}
-              employeeName={editingLead?.raName}
+              employeeId={editingLead?.employee_id}
+              employeeName={editingLead?.ra_name}
               leadToEdit={editingLead}
             />
           )}
