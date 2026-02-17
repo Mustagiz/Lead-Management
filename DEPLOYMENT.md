@@ -200,21 +200,16 @@ MONGODB_URI=mongodb://localhost:27017/leadmanagement
 
 ## Deployment Options
 
-### Option 1: Vercel (Frontend Only - Quick Deploy)
+### Option 1: Vercel (Frontend + Supabase)
 
-1. **Install Vercel CLI**
-```bash
-npm install -g vercel
-```
+1. **Connect Repository**: Import your GitHub repository into Vercel.
+2. **Environment Variables**: Add the following in the Vercel Dashboard:
+   - `REACT_APP_SUPABASE_URL`: Your Supabase Project URL
+   - `REACT_APP_SUPABASE_ANON_KEY`: Your Supabase Anon Key
+3. **Database Setup**: Ensure you've run the SQL migration script in the Supabase SQL Editor.
+4. **Deploy**: Click Deploy.
 
-2. **Deploy**
-```bash
-vercel --prod
-```
-
-3. **Configure environment variables in Vercel dashboard**
-
-**Note:** For LocalStorage version, this is sufficient. For backend version, deploy backend separately.
+Note: No separate backend is required as we are using Supabase's client-side SDK.
 
 ### Option 2: Heroku (Full Stack)
 
