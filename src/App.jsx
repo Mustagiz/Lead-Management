@@ -11,16 +11,58 @@ const useAuth = () => {
   return context;
 };
 
-// Supabase Helper Functions
 const getProfile = async (userId) => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-  if (error) return null;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (error) {
+      console.error('Error fetching profile:', error.message);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error('getProfile crash:', err);
+    return null;
+  }
 };
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('React Error Boundary caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
+          <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg border border-red-200">
+            <h2 className="text-xl font-bold text-red-700 mb-4">Application Crash</h2>
+            <p className="text-gray-700 mb-4">The application encountered a runtime error.</p>
+            <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4 overflow-auto max-h-40">
+              {this.state.error && this.state.error.toString()}
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-red-600 text-white py-2 rounded-lg font-medium hover:bg-red-700"
+            >
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Authentication Provider
 const AuthProvider = ({ children }) => {
@@ -3283,21 +3325,27 @@ const App = () => {
   }
 
   // Check if Supabase initialized correctly
-  const isSupabaseReady = process.env.REACT_APP_SUPABASE_URL && process.env.REACT_APP_SUPABASE_URL.startsWith('https://');
+  const url = process.env.REACT_APP_SUPABASE_URL || '';
+  const key = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+  const isSupabaseReady = url && url.startsWith('https://');
+  const isKeyValid = key && (key.startsWith('eyJ') || key.length > 50); // Supabase keys are long JWTs
 
-  if (!isSupabaseReady) {
+  if (!isSupabaseReady || !isKeyValid) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
         <Card className="max-w-md p-8 border-red-200">
           <h2 className="text-xl font-bold text-red-700 mb-4">Configuration Error</h2>
           <p className="text-gray-700 mb-4">
-            The Supabase URL is missing or invalid. Please check your Vercel Environment Variables.
+            {!isSupabaseReady
+              ? 'The Supabase URL is missing or invalid.'
+              : 'The Supabase Anon Key looks incorrect (expected a long string starting with "eyJ").'}
           </p>
-          <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4">
-            REACT_APP_SUPABASE_URL={process.env.REACT_APP_SUPABASE_URL || 'missing'}
+          <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4 overflow-auto max-h-20">
+            URL: {url || 'MISSING'}<br />
+            Key: {key ? (key.substring(0, 5) + '...') : 'MISSING'}
           </div>
           <p className="text-sm text-gray-500">
-            Ensure you've added <strong>REACT_APP_SUPABASE_URL</strong> and <strong>REACT_APP_SUPABASE_ANON_KEY</strong> to your Vercel project settings.
+            Please check your Vercel Environment Variables. Prefix them with <strong>REACT_APP_</strong>.
           </p>
         </Card>
       </div>
@@ -3310,28 +3358,30 @@ const App = () => {
 // Export with Provider
 export default function LeadManagementApp() {
   return (
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
 // CSS for animations
 const style = document.createElement('style');
 style.textContent = `
-      @keyframes blob {
-        0 %, 100 % { transform: translate(0, 0) scale(1); }
-    33% {transform: translate(30px, -50px) scale(1.1); }
-      66% {transform: translate(-20px, 20px) scale(0.9); }
+  @keyframes blob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
   }
-      .animate-blob {
-        animation: blob 7s infinite;
+  .animate-blob {
+    animation: blob 7s infinite;
   }
-      .animation-delay-2000 {
-        animation - delay: 2s;
+  .animation-delay-2000 {
+    animation-delay: 2s;
   }
-      .animation-delay-4000 {
-        animation - delay: 4s;
+  .animation-delay-4000 {
+    animation-delay: 4s;
   }
-      `;
+`;
 document.head.appendChild(style);
