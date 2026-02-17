@@ -1139,6 +1139,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         let importedCount = 0;
         let skippedCount = 0;
+        let missingCampaignCount = 0;
         const newLeads = [];
 
         for (let i = 1; i < rows.length; i++) {
@@ -1146,15 +1147,26 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           const companyName = getValue(columns, 'Company Name') || getValue(columns, 'Company');
 
           if (companyName) {
-            const campaignName = getValue(columns, 'Campaign');
+            const rawCampaignName = getValue(columns, 'Campaign');
+            let campaignName = null;
             const customQuestionResponses = {};
-            if (campaignName) {
-              const campaignObj = campaigns.find(c => c.name === campaignName);
-              if (campaignObj && campaignObj.customQuestions) {
-                campaignObj.customQuestions.forEach(q => {
-                  const answer = getValue(columns, q.question);
-                  if (answer) customQuestionResponses[q.id] = answer;
-                });
+
+            if (rawCampaignName) {
+              // Case-insensitive lookup against existing campaigns
+              const campaignObj = campaigns.find(c =>
+                c.name.toLowerCase() === rawCampaignName.toLowerCase()
+              );
+
+              if (campaignObj) {
+                campaignName = campaignObj.name; // Use exact name from DB
+                if (campaignObj.customQuestions) {
+                  campaignObj.customQuestions.forEach(q => {
+                    const answer = getValue(columns, q.question);
+                    if (answer) customQuestionResponses[q.id] = answer;
+                  });
+                }
+              } else {
+                missingCampaignCount++;
               }
             }
 
@@ -1202,12 +1214,17 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         if (newLeads.length > 0) {
           const { error } = await supabase.from('leads').insert(newLeads);
           if (error) {
+            console.error('Insert error:', error);
             alert('Error importing leads: ' + error.message);
             return;
           }
         }
 
-        alert(`Successfully uploaded ${importedCount} leads.${skippedCount > 0 ? ` Skipped ${skippedCount} rows due to missing Company Name.` : ''}`);
+        let message = `Successfully uploaded ${importedCount} leads.`;
+        if (skippedCount > 0) message += `\nSkipped ${skippedCount} rows due to missing Company Name.`;
+        if (missingCampaignCount > 0) message += `\nWarning: ${missingCampaignCount} rows had campaign names that don't exist and were set to 'None'.`;
+
+        alert(message);
         onSuccess();
         onClose();
       };
