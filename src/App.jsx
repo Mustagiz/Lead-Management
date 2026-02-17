@@ -3322,7 +3322,7 @@ const MainLayout = () => {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 mt-12">
         <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-600">
-          © 2026 Lead Manager Pro. All rights reserved.
+          © Outvying 2026 Lead Manager Pro. All rights reserved.
         </div>
       </footer>
     </div>
