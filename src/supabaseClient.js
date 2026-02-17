@@ -5,6 +5,22 @@ const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || ''
 
 let supabaseClient;
 
+const createMockSupabase = () => {
+    const mock = () => ({
+        data: null,
+        error: { message: 'Supabase not initialized' },
+        then: (cb) => Promise.resolve({ data: { session: null }, error: null }).then(cb),
+        unsubscribe: () => { }
+    });
+    return new Proxy(mock, {
+        get: (target, prop) => {
+            if (prop === 'onAuthStateChange') return () => ({ data: { subscription: { unsubscribe: () => { } } } });
+            if (prop === 'auth') return createMockSupabase();
+            return createMockSupabase();
+        }
+    });
+};
+
 try {
     if (!supabaseUrl || !supabaseUrl.startsWith('https://')) {
         throw new Error('Invalid or missing Supabase URL');
@@ -12,10 +28,7 @@ try {
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
 } catch (err) {
     console.error('Supabase initialization failed:', err.message)
-    // Create a proxy to prevent crashes when accessing properties of undefined supabase
-    supabaseClient = new Proxy({}, {
-        get: () => () => ({ data: null, error: { message: 'Supabase not initialized' } })
-    });
+    supabaseClient = createMockSupabase();
 }
 
 export const supabase = supabaseClient
