@@ -3328,7 +3328,7 @@ const App = () => {
   const url = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
   const key = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
   const isSupabaseReady = url && url.startsWith('https://');
-  const isKeyValid = key && (key.startsWith('eyJ') || key.length > 50);
+  const isKeyValid = key && (key.startsWith('eyJ') || key.startsWith('sb_publishable_') || key.length > 40);
 
   if (!isSupabaseReady || !isKeyValid) {
     return (
