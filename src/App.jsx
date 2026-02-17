@@ -1114,20 +1114,46 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target.result;
-      const rows = text.split(/\r?\n/).filter(row => row.trim());
+      let text = event.target.result;
+
+      // Strip UTF-8 BOM if present
+      if (text.startsWith('\ufeff')) {
+        text = text.substring(1);
+      }
+
+      // Split rows and filter out truly empty ones (including rows that are just commas)
+      const rows = text.split(/\r?\n/).filter(row => {
+        const trimmed = row.trim();
+        return trimmed && trimmed.replace(/,/g, '').length > 0;
+      });
+
+      if (rows.length < 2) {
+        alert('The CSV file appears to be empty or only contains headers.');
+        return;
+      }
+
       const processRows = async () => {
         // Parse headers
-        const headers = parseCSVLine(rows[0]).map(h => h.trim().toLowerCase());
+        const rawHeaders = parseCSVLine(rows[0]);
+        const headers = rawHeaders.map(h => h.trim().toLowerCase());
+
         const headerMap = headers.reduce((acc, curr, index) => {
-          acc[curr] = index;
+          if (curr) acc[curr] = index;
           return acc;
         }, {});
+
+        // Check for mandatory header: Company Name
+        if (!headerMap['company name'] && !headerMap['company']) {
+          alert(`Mandatory header 'Company Name' or 'Company' not found.\nAvailable headers: ${headers.join(', ')}`);
+          return;
+        }
 
         // Helper to safely get value by header name
         const getValue = (cols, fieldName) => {
           const index = headerMap[fieldName.toLowerCase()];
-          return (index !== undefined && cols[index]) ? cols[index] : '';
+          if (index === undefined) return '';
+          const val = cols[index];
+          return val ? val.trim() : '';
         };
 
         const normalizeDate = (dateStr) => {
@@ -1152,7 +1178,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         const newLeads = [];
 
         for (let i = 1; i < rows.length; i++) {
-          const columns = parseCSVLine(rows[i]).map(col => col.trim());
+          const columns = parseCSVLine(rows[i]);
           const companyName = getValue(columns, 'Company Name') || getValue(columns, 'Company');
 
           if (companyName) {
