@@ -2151,10 +2151,34 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(() => {
-      fetchCurrentBreaks();
-    }, 30000); // 30s refresh for monitoring
-    return () => clearInterval(interval);
+
+    // Subscribe to real-time updates for breaks_monitoring
+    const today = new Date().toISOString().split('T')[0];
+    const channel = supabase
+      .channel('admin_breaks_monitoring')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'breaks_monitoring',
+          filter: `date=eq.${today}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setAllBreaks(prev => [...prev, payload.new]);
+          } else if (payload.eventType === 'UPDATE') {
+            setAllBreaks(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
+          } else if (payload.eventType === 'DELETE') {
+            setAllBreaks(prev => prev.filter(b => b.id === payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchCurrentBreaks = async () => {
@@ -2191,7 +2215,8 @@ const AdminDashboard = () => {
       employees: (usersData || []).filter(u => u.role === 'employee').length,
       qaUsers: (usersData || []).filter(u => u.role === 'qa').length,
       totalCampaigns: (campaignsData || []).length,
-      activeCampaigns: (campaignsData || []).filter(c => c.is_active).length
+      activeCampaigns: (campaignsData || []).filter(c => c.is_active).length,
+      activeBreaks: (breaksData || []).filter(b => b.current_break_start).length
     });
   };
 
@@ -2552,6 +2577,18 @@ const AdminDashboard = () => {
                 <XCircle className="w-10 h-10 text-red-600 opacity-50" />
               </div>
             </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-purple-600 mb-1">Active Breaks</p>
+                  <p className="text-3xl font-bold text-purple-900">
+                    {allBreaks.filter(b => b.current_break_start).length}
+                  </p>
+                </div>
+                <Coffee className="w-10 h-10 text-purple-600 opacity-50" />
+              </div>
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2569,6 +2606,12 @@ const AdminDashboard = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">QA Users</span>
                   <span className="font-bold text-gray-900">{stats.qaUsers}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                  <span className="text-purple-600 font-semibold">Agents on Break</span>
+                  <span className="font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                    {allBreaks.filter(b => b.current_break_start).length}
+                  </span>
                 </div>
               </div>
             </Card>
