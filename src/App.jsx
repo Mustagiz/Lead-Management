@@ -2060,6 +2060,17 @@ const AdminDashboard = () => {
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, userId: null, userName: '' });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [breakFilters, setBreakFilters] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+
+  const formatTime = (ts) => {
+    const h = Math.floor(ts / 3600);
+    const m = Math.floor((ts % 3600) / 60);
+    const s = ts % 60;
+    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     loadData();
@@ -2269,6 +2280,67 @@ const AdminDashboard = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const downloadBreakReport = async () => {
+    if (!breakFilters.startDate || !breakFilters.endDate) {
+      alert('Please select both start and end dates');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('breaks_monitoring')
+        .select(`
+          date,
+          total_break_seconds,
+          breaks,
+          user_id,
+          profiles:user_id (name)
+        `)
+        .gte('date', breakFilters.startDate)
+        .lte('date', breakFilters.endDate);
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        alert('No break data found for the selected range');
+        return;
+      }
+
+      // Flatten the data: one row per break session
+      const rows = [['Agent Name', 'Date', 'Start Time', 'End Time', 'Duration', 'Daily Total']];
+
+      data.forEach(record => {
+        const agentName = record.profiles?.name || 'Unknown';
+        const date = record.date;
+        const dailyTotal = formatTime(record.total_break_seconds);
+
+        if (record.breaks && record.breaks.length > 0) {
+          record.breaks.forEach(b => {
+            const startStr = new Date(b.startTime).toLocaleTimeString();
+            const endStr = b.endTime ? new Date(b.endTime).toLocaleTimeString() : 'In Progress';
+            const duration = b.durationSeconds
+              ? `${Math.floor(b.durationSeconds / 60)}:${(b.durationSeconds % 60).toString().padStart(2, '0')}`
+              : (b.duration ? `${b.duration} min` : '-');
+
+            rows.push([agentName, date, startStr, endStr, duration, dailyTotal]);
+          });
+        } else {
+          rows.push([agentName, date, '-', '-', '0:00', dailyTotal]);
+        }
+      });
+
+      const csvContent = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `break_report_${breakFilters.startDate}_to_${breakFilters.endDate}.csv`;
+      a.click();
+    } catch (err) {
+      console.error('Error downloading break report:', err);
+      alert('Failed to generate report: ' + err.message);
+    }
   };
 
   const paginatedLeads = filteredLeads.slice(
@@ -2677,6 +2749,35 @@ const AdminDashboard = () => {
             <h3 className="text-xl font-bold text-gray-900">Real-time Break Monitoring</h3>
             <p className="text-sm text-gray-600">Monitor all agents' current break status and total break time for today.</p>
           </div>
+
+          <div className="p-6 bg-white border-b border-gray-200">
+            <div className="flex flex-col md:flex-row gap-4 items-end">
+              <div className="flex-1">
+                <Input
+                  label="Start Date"
+                  type="date"
+                  value={breakFilters.startDate}
+                  onChange={(e) => setBreakFilters({ ...breakFilters, startDate: e.target.value })}
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  label="End Date"
+                  type="date"
+                  value={breakFilters.endDate}
+                  onChange={(e) => setBreakFilters({ ...breakFilters, endDate: e.target.value })}
+                />
+              </div>
+              <Button
+                onClick={downloadBreakReport}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center mb-0.5"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Report
+              </Button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -2701,13 +2802,6 @@ const AdminDashboard = () => {
                   };
                   const isOnBreak = userBreakRecord.current_break_start;
                   const totalSecs = userBreakRecord.total_break_seconds || 0;
-
-                  const formatTime = (ts) => {
-                    const h = Math.floor(ts / 3600);
-                    const m = Math.floor((ts % 3600) / 60);
-                    const s = ts % 60;
-                    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
-                  };
 
                   return (
                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
