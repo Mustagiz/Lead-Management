@@ -4224,16 +4224,7 @@ const QADashboard = () => {
     return currentUser ? <MainLayout /> : <LoginPage />;
   };
 
-  // Export with Provider
-  export default function LeadManagementApp() {
-    return (
-      <ErrorBoundary>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </ErrorBoundary>
-    );
-  }
+
 
   // CSS for animations
   const style = document.createElement('style');
@@ -4256,9 +4247,11 @@ const QADashboard = () => {
   document.head.appendChild(style);
 
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 
