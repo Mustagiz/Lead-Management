@@ -3,6 +3,8 @@ import { Upload, Download, Users, BarChart3, Shield, LogOut, Filter, Check, X, E
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from './supabaseClient';
 
+import { createClient } from '@supabase/supabase-js';
+
 // Context for Authentication
 const AuthContext = createContext();
 
@@ -130,8 +132,41 @@ const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
+  // Create user without signing in (for Admin use)
+  const createUser = async (userData) => {
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return { success: false, error: 'Supabase configuration missing' };
+    }
+
+    // Create a temporary client to avoid overwriting the current session
+    const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    });
+
+    const { error } = await tempClient.auth.signUp({
+      email: userData.username,
+      password: userData.password,
+      options: {
+        data: {
+          full_name: userData.name,
+          role: userData.role || 'employee'
+        }
+      }
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, register, isLoading }}>
+    <AuthContext.Provider value={{ currentUser, login, logout, register, createUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -241,75 +276,50 @@ const Card = ({ children, className = '' }) => (
   </div>
 );
 
-// Login Component
+// Login Page Component
 const LoginPage = () => {
-  const { login, register } = useAuth();
-  const [isRegister, setIsRegister] = useState(false);
-  const [formData, setFormData] = useState({ username: '', password: '', name: '' });
+  const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (isRegister) {
-      const result = await register(formData);
-      if (result.success) {
-        setIsRegister(false);
-        setFormData({ username: '', password: '', name: '' });
-        alert('Registration successful! Please login.');
-      } else {
-        setError(result.error);
-      }
-    } else {
-      const result = await login(formData.username, formData.password);
-      if (!result.success) {
-        setError(result.error);
-      }
+    // Enforce @ovmkr.site domain if not present
+    let finalEmail = formData.username.trim();
+    if (!finalEmail.includes('@')) {
+      finalEmail = `${finalEmail}@ovmkr.site`;
+    }
+
+    const { success, error } = await login(finalEmail, formData.password);
+    if (!success) {
+      setError(error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-6">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/4 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-1/2 -right-1/4 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
-
-      <Card className="w-full max-w-md p-8 relative backdrop-blur-sm bg-white/90">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mb-4 shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
+        <div className="text-center p-8 border-b border-gray-100">
+          <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4 transform -rotate-6 transition-transform hover:rotate-0">
             <BarChart3 className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Lead Manager Pro
           </h1>
-          <p className="text-gray-600 mt-2">
-            {isRegister ? 'Create your account' : 'Welcome back'}
-          </p>
+          <p className="text-gray-500 mt-2">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {isRegister && (
-            <Input
-              label="Full Name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              placeholder="Enter your full name"
-            />
-          )}
-
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
           <Input
-            label="Email"
-            type="email"
+            label="Email or Username"
+            type="text"
+            placeholder="username@ovmkr.site"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             required
-            placeholder="Enter your email"
           />
 
           <div className="relative">
@@ -319,7 +329,6 @@ const LoginPage = () => {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
-              placeholder="Enter your password"
             />
             <button
               type="button"
@@ -337,29 +346,9 @@ const LoginPage = () => {
           )}
 
           <Button type="submit" className="w-full mb-4">
-            {isRegister ? 'Register' : 'Login'}
+            Login
           </Button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegister(!isRegister);
-                setError('');
-                setFormData({ username: '', password: '', name: '' });
-              }}
-              className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-            >
-              {isRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
-            </button>
-          </div>
         </form>
-
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            Demo Credentials: admin/admin123, employee1/emp123, qa1/qa123
-          </p>
-        </div>
       </Card>
     </div>
   );
@@ -374,6 +363,7 @@ const EmployeeDashboard = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
   const [stats, setStats] = useState({ total: 0, qualified: 0, disqualified: 0, pending: 0 });
   const [onBreak, setOnBreak] = useState(false);
   const [breakStartTime, setBreakStartTime] = useState(null);
@@ -779,6 +769,7 @@ const EmployeeDashboard = () => {
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Job Title</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -798,6 +789,18 @@ const EmployeeDashboard = () => {
                           }`}>
                           {lead.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setShowUploadModal(true);
+                          }}
+                          className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -834,10 +837,14 @@ const EmployeeDashboard = () => {
           {/* Upload Modal */}
           {showUploadModal && (
             <UploadLeadModal
-              onClose={() => setShowUploadModal(false)}
+              onClose={() => {
+                setShowUploadModal(false);
+                setSelectedLead(null);
+              }}
               onSuccess={loadLeads}
               employeeId={currentUser.id}
               employeeName={currentUser.name}
+              leadToEdit={selectedLead}
             />
           )}
         </>
@@ -1656,14 +1663,35 @@ const QADashboard = () => {
   const [activeCampaigns, setActiveCampaigns] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [stats, setStats] = useState({ audited: 0, qualified: 0, disqualified: 0 });
-  const [isClockedIn, setIsClockedIn] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('leads');
+
+  // Break Management State
+  const [onBreak, setOnBreak] = useState(false);
+  const [breakStartTime, setBreakStartTime] = useState(null);
+  const [totalBreakTime, setTotalBreakTime] = useState(0);
+  const [currentBreakDuration, setCurrentBreakDuration] = useState(0);
+  const [breakHistory, setBreakHistory] = useState([]);
+
   const LEADS_PER_PAGE = 10;
 
   useEffect(() => {
     loadLeads();
+    loadBreakData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (onBreak && breakStartTime) {
+      interval = setInterval(() => {
+        const durationSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
+        setCurrentBreakDuration(durationSeconds);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [onBreak, breakStartTime]);
 
   const loadLeads = async () => {
     const { data: leadsData, error: leadsError } = await supabase
@@ -1695,6 +1723,95 @@ const QADashboard = () => {
     }
   };
 
+  const loadBreakData = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data: userBreaks, error } = await supabase
+      .from('breaks_monitoring')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('date', today)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error loading break data:', error);
+      return;
+    }
+
+    if (userBreaks) {
+      setTotalBreakTime(userBreaks.total_break_seconds || 0);
+      setBreakHistory(userBreaks.breaks || []);
+      if (userBreaks.current_break_start) {
+        setOnBreak(true);
+        setBreakStartTime(new Date(userBreaks.current_break_start).getTime());
+      }
+    } else {
+      setTotalBreakTime(0);
+      setBreakHistory([]);
+      setOnBreak(false);
+      setBreakStartTime(null);
+    }
+  };
+
+  const handleBreakToggle = async () => {
+    const today = new Date().toISOString().split('T')[0];
+
+    if (onBreak) {
+      // End break
+      const durationSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
+      const newTotal = totalBreakTime + durationSeconds;
+      const newBreak = {
+        startTime: new Date(breakStartTime).toISOString(),
+        endTime: new Date().toISOString(),
+        durationSeconds: durationSeconds,
+        duration: Math.floor(durationSeconds / 60)
+      };
+
+      const { error } = await supabase
+        .from('breaks_monitoring')
+        .update({
+          total_break_seconds: newTotal,
+          current_break_start: null,
+          breaks: [...breakHistory, newBreak]
+        })
+        .eq('user_id', currentUser.id)
+        .eq('date', today);
+
+      if (!error) {
+        setTotalBreakTime(newTotal);
+        setBreakHistory([...breakHistory, newBreak]);
+        setOnBreak(false);
+        setBreakStartTime(null);
+        setCurrentBreakDuration(0);
+      } else {
+        alert('Error saving break end: ' + error.message);
+      }
+    } else {
+      // Start break
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('breaks_monitoring')
+        .upsert({
+          user_id: currentUser.id,
+          date: today,
+          current_break_start: now
+        }, { onConflict: 'user_id,date' });
+
+      if (!error) {
+        setOnBreak(true);
+        setBreakStartTime(new Date(now).getTime());
+      } else {
+        alert('Error starting break: ' + error.message);
+      }
+    }
+  };
+
+  const formatTime = (totalSeconds) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(hrs > 0 ? 2 : 1, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const applyFilters = () => {
     let filtered = [...leads];
 
@@ -1722,11 +1839,6 @@ const QADashboard = () => {
   };
 
   const handleQualify = async (leadId, status) => {
-    if (!isClockedIn) {
-      alert('Please clock in first!');
-      return;
-    }
-
     const { error: updateError } = await supabase
       .from('leads')
       .update({ status })
@@ -1746,11 +1858,6 @@ const QADashboard = () => {
   };
 
   const handleBulkAudit = async (status) => {
-    if (!isClockedIn) {
-      alert('Please clock in first!');
-      return;
-    }
-
     if (selectedLeads.length === 0) {
       alert('Please select leads first!');
       return;
@@ -1822,7 +1929,7 @@ const QADashboard = () => {
 
     const csvContent = [headers.join(','), ...rows.map(e => e.map(item => `"${(item || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -1842,237 +1949,369 @@ const QADashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats and Clock In/Out */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-purple-600 mb-1">Total Audited</p>
-              <p className="text-3xl font-bold text-purple-900">{stats.audited}</p>
-            </div>
-            <CheckCircle className="w-10 h-10 text-purple-600 opacity-50" />
-          </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-green-600 mb-1">Qualified</p>
-              <p className="text-3xl font-bold text-green-900">{stats.qualified}</p>
-            </div>
-            <Check className="w-10 h-10 text-green-600 opacity-50" />
-          </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-red-600 mb-1">Disqualified</p>
-              <p className="text-3xl font-bold text-red-900">{stats.disqualified}</p>
-            </div>
-            <X className="w-10 h-10 text-red-600 opacity-50" />
-          </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <div className="flex flex-col justify-center">
-            <p className="text-sm font-semibold text-blue-600 mb-3">Status</p>
-            <Button
-              variant={isClockedIn ? 'danger' : 'success'}
-              onClick={() => setIsClockedIn(!isClockedIn)}
-              className="w-full"
-            >
-              <Clock className="w-4 h-4 mr-2" />
-              {isClockedIn ? 'Clock Out' : 'Clock In'}
-            </Button>
-          </div>
-        </Card>
+      {/* Tab Navigation */}
+      <div className="flex gap-4 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('leads')}
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'leads'
+            ? 'border-indigo-600 text-indigo-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+        >
+          Leads Management
+        </button>
+        <button
+          onClick={() => setActiveTab('breaks')}
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'breaks'
+            ? 'border-purple-600 text-purple-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+        >
+          <Coffee className="w-4 h-4 inline mr-2" />
+          Break Management
+        </button>
       </div>
 
-      {/* Filters */}
-      <Card className="p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Filters</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Input
-            label="Start Date"
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-          />
-          <Input
-            label="End Date"
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-          />
-          <Input
-            label="Agent Name"
-            value={filters.agent}
-            onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
-            placeholder="Search by agent name"
-          />
-          <SearchableSelect
-            label="Campaign Name"
-            value={filters.campaign}
-            onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
-            placeholder="Search campaign..."
-            options={activeCampaigns.map(c => ({ value: c.name, label: c.name }))}
-          />
-          <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1">
+      {activeTab === 'leads' && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-purple-600 mb-1">Total Audited</p>
+                  <p className="text-3xl font-bold text-purple-900">{stats.audited}</p>
+                </div>
+                <CheckCircle className="w-10 h-10 text-purple-600 opacity-50" />
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-green-600 mb-1">Qualified</p>
+                  <p className="text-3xl font-bold text-green-900">{stats.qualified}</p>
+                </div>
+                <Check className="w-10 h-10 text-green-600 opacity-50" />
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-red-600 mb-1">Disqualified</p>
+                  <p className="text-3xl font-bold text-red-900">{stats.disqualified}</p>
+                </div>
+                <X className="w-10 h-10 text-red-600 opacity-50" />
+              </div>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Filters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Input
+                label="Start Date"
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+              />
+              <Input
+                label="End Date"
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+              />
+              <Input
+                label="Agent Name"
+                value={filters.agent}
+                onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
+                placeholder="Search by agent name"
+              />
+              <SearchableSelect
+                label="Campaign Name"
+                value={filters.campaign}
+                onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
+                placeholder="Search campaign..."
+                options={activeCampaigns.map(c => ({ value: c.name, label: c.name }))}
+              />
+              <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1">
+                <Button
+                  onClick={applyFilters}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transform transition-all hover:-translate-y-0.5"
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Apply
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleClearFilters}
+                  title="Clear Filters"
+                  className="px-3"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+                <Button variant="secondary" onClick={downloadLeads} title="Download filtered leads">
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Bulk Actions */}
+          {selectedLeads.length > 0 && (
+            <Card className="p-4 bg-indigo-50 border-indigo-200">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-indigo-900">
+                  {selectedLeads.length} lead(s) selected
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="success" onClick={() => handleBulkAudit('qualified')}>
+                    <Check className="w-4 h-4 mr-2" />
+                    Qualify All
+                  </Button>
+                  <Button variant="danger" onClick={() => handleBulkAudit('disqualified')}>
+                    <X className="w-4 h-4 mr-2" />
+                    Disqualify All
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Upload Button */}
+          <div className="flex justify-end">
             <Button
-              onClick={applyFilters}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transform transition-all hover:-translate-y-0.5"
+              onClick={() => setShowUploadModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-700"
             >
-              <Filter className="w-4 h-4 mr-2" />
-              Apply
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleClearFilters}
-              title="Clear Filters"
-              className="px-3"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button variant="secondary" onClick={downloadLeads} title="Download filtered leads">
-              <Download className="w-4 h-4" />
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Leads
             </Button>
           </div>
-        </div>
-      </Card>
 
-      {/* Bulk Actions */}
-      {selectedLeads.length > 0 && (
-        <Card className="p-4 bg-indigo-50 border-indigo-200">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-indigo-900">
-              {selectedLeads.length} lead(s) selected
+          {/* Leads Table */}
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-purple-50 to-indigo-50">
+                  <tr>
+                    <th className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedLeads(paginatedLeads.map(l => l.id));
+                          } else {
+                            setSelectedLeads([]);
+                          }
+                        }}
+                        checked={selectedLeads.length === paginatedLeads.length && paginatedLeads.length > 0}
+                      />
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Contact</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paginatedLeads.map(lead => (
+                    <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.includes(lead.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLeads([...selectedLeads, lead.id]);
+                            } else {
+                              setSelectedLeads(selectedLeads.filter(id => id !== lead.id));
+                            }
+                          }}
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {lead.first_name} {lead.last_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
+                          lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                          {lead.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleQualify(lead.id, 'qualified')}
+                            className="text-green-600 hover:text-green-700"
+                            title="Qualify lead"
+                          >
+                            <Check className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleQualify(lead.id, 'disqualified')}
+                            className="text-red-600 hover:text-red-700"
+                            title="Disqualify lead"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {showUploadModal && (
+            <UploadLeadModal
+              onClose={() => setShowUploadModal(false)}
+              onSuccess={() => {
+                loadLeads();
+              }}
+              activeCampaigns={activeCampaigns}
+            />
+          )}
+
+        </>
+      )}
+
+      {activeTab === 'breaks' && (
+        <Card className="max-w-4xl mx-auto overflow-hidden">
+          <div className="p-8 border-b border-gray-200 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 text-center">
+            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+              <Coffee className={`w-10 h-10 ${onBreak ? 'text-indigo-600 animate-pulse' : 'text-gray-400'}`} />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Break Management</h2>
+            <p className="text-gray-600 text-lg">
+              {onBreak ? 'You are currently on break' : 'Ready to take a break?'}
             </p>
-            <div className="flex gap-2">
-              <Button variant="success" onClick={() => handleBulkAudit('qualified')}>
-                <Check className="w-4 h-4 mr-2" />
-                Qualify All
-              </Button>
-              <Button variant="danger" onClick={() => handleBulkAudit('disqualified')}>
-                <X className="w-4 h-4 mr-2" />
-                Disqualify All
-              </Button>
+          </div>
+
+          <div className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="text-center p-6 bg-gray-50 rounded-2xl border border-gray-200">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Current Session</p>
+                <p className="text-5xl font-mono font-bold text-indigo-600 tabular-nums">
+                  {formatTime(currentBreakDuration)}
+                </p>
+                <p className="text-xs text-indigo-400 mt-2 font-medium">Session Duration</p>
+              </div>
+
+              <div className="text-center p-6 bg-gray-50 rounded-2xl border border-gray-200">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Total Today</p>
+                <p className="text-5xl font-mono font-bold text-gray-800 tabular-nums">
+                  {formatTime(totalBreakTime + (onBreak ? currentBreakDuration : 0))}
+                </p>
+                <p className="text-xs text-gray-400 mt-2 font-medium">Accumulated Time</p>
+              </div>
+            </div>
+
+            <div className="flex justify-center mb-12">
+              <button
+                onClick={handleBreakToggle}
+                className={`
+                                relative group overflow-hidden rounded-full py-4 px-12 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl
+                                ${onBreak
+                    ? 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white shadow-red-200'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-green-200'
+                  }
+                              `}
+              >
+                <div className="relative z-10 flex items-center gap-3 text-xl font-bold tracking-wide">
+                  {onBreak ? (
+                    <>
+                      <LogOut className="w-6 h-6" />
+                      <span>End Break</span>
+                    </>
+                  ) : (
+                    <>
+                      <Coffee className="w-6 h-6" />
+                      <span>Start Break</span>
+                    </>
+                  )}
+                </div>
+              </button>
+            </div>
+
+            <div className="border-t border-gray-200 pt-8">
+              <h4 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-gray-400" />
+                Today's History
+              </h4>
+              <div className="space-y-4">
+                {breakHistory.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8 italic bg-gray-50 rounded-xl border border-gray-100">
+                    No breaks taken yet today.
+                  </p>
+                ) : (
+                  breakHistory.map((b, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                          #{i + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <span className="text-gray-400 mx-2">→</span>
+                            {new Date(b.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">{new Date(b.startTime).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="px-4 py-1.5 bg-gray-100 rounded-lg text-gray-700 font-mono font-medium text-sm">
+                        {formatTime(b.durationSeconds)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </Card>
       )}
-
-      {/* Leads Table */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-purple-50 to-indigo-50">
-              <tr>
-                <th className="px-6 py-4">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedLeads(paginatedLeads.map(l => l.id));
-                      } else {
-                        setSelectedLeads([]);
-                      }
-                    }}
-                    checked={selectedLeads.length === paginatedLeads.length && paginatedLeads.length > 0}
-                  />
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {paginatedLeads.map(lead => (
-                <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedLeads.includes(lead.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedLeads([...selectedLeads, lead.id]);
-                        } else {
-                          setSelectedLeads(selectedLeads.filter(id => id !== lead.id));
-                        }
-                      }}
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {lead.first_name} {lead.last_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                      lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleQualify(lead.id, 'qualified')}
-                        className={`text-green-600 hover:text-green-700 ${!isClockedIn ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        disabled={!isClockedIn}
-                        title={!isClockedIn ? 'Please clock in first' : 'Qualify lead'}
-                      >
-                        <Check className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleQualify(lead.id, 'disqualified')}
-                        className={`text-red-600 hover:text-red-700 ${!isClockedIn ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        disabled={!isClockedIn}
-                        title={!isClockedIn ? 'Please clock in first' : 'Disqualify lead'}
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
     </div>
+  );
+};      </Card >
+    </div >
   );
 };
 
@@ -3464,7 +3703,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
   );
   const [showPassword, setShowPassword] = useState(false);
 
-  const { register } = useAuth();
+  const { register, createUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -3491,7 +3730,8 @@ const UserModal = ({ user, onClose, onSuccess }) => {
         finalEmail = `${finalEmail}@ovmkr.site`;
       }
 
-      const result = await register({
+      // Use createUser to avoid changing the current session
+      const result = await createUser({
         ...formData,
         username: finalEmail
       });
