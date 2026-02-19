@@ -1222,18 +1222,57 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         const normalizeDate = (dateStr) => {
           if (!dateStr) return new Date().toISOString().split('T')[0];
-          const parts = dateStr.includes('/') ? dateStr.split('/') : dateStr.includes('-') ? dateStr.split('-') : [];
+
+          // Try to handle common formats manually first
+          const cleanDateStr = dateStr.trim();
+
+          // Format YYYY-MM-DD
+          if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDateStr)) return cleanDateStr;
+
+          // Handle DD-MM-YYYY or MM-DD-YYYY or DD/MM/YYYY etc.
+          const parts = cleanDateStr.includes('/') ? cleanDateStr.split('/') :
+            cleanDateStr.includes('-') ? cleanDateStr.split('-') :
+              cleanDateStr.includes('.') ? cleanDateStr.split('.') : [];
+
           if (parts.length === 3) {
-            if (parts[0].length === 4) return dateStr;
-            const num1 = parseInt(parts[0], 10);
+            // Check if first part matches year (YYYY-MM-DD)
+            if (parts[0].length === 4) {
+              const y = parts[0];
+              const m = parts[1].padStart(2, '0');
+              const d = parts[2].padStart(2, '0');
+              return `${y}-${m}-${d}`;
+            }
+
+            // Check if last part matches year (DD-MM-YYYY or MM-DD-YYYY)
             if (parts[2].length === 4) {
-              if (num1 > 12) {
-                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+              const y = parts[2];
+              const p1 = parseInt(parts[0], 10);
+              const p2 = parseInt(parts[1], 10);
+
+              // Ambiguous case: if p1 > 12, it must be day (DD-MM-YYYY)
+              if (p1 > 12) {
+                return `${y}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
               }
-              return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+              // If p2 > 12, p1 must be month (MM-DD-YYYY) -- e.g. 12/31/2026
+              if (p2 > 12) {
+                return `${y}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+              }
+              // Otherwise assume standard US format MM-DD-YYYY unless user context implies otherwise
+              // For safety, let's default to standard JS behavior or assume MM-DD-YYYY
+              return `${y}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
             }
           }
-          return dateStr;
+
+          // Fallback to JS Date parsing
+          const timestamp = Date.parse(cleanDateStr);
+          if (!isNaN(timestamp)) {
+            return new Date(timestamp).toISOString().split('T')[0];
+          }
+
+          // Final fallback: return today's date if parsing fails completely, 
+          // to prevent DB error on import. Ideally we'd error out, but user UX 
+          // usually prefers skipping errors for minor fields or defaulting.
+          return new Date().toISOString().split('T')[0];
         };
 
         let importedCount = 0;
