@@ -2310,911 +2310,747 @@ const QADashboard = () => {
       )}
     </div>
   );
-};      </Card >
-    </div >
-  );
-};
 
-// Admin Break History Modal
-const AdminBreakHistoryModal = ({ user, onClose }) => {
-  const [breakData, setBreakData] = useState({ total_break_seconds: 0, breaks: [] });
-  const today = new Date().toISOString().split('T')[0];
 
-  useEffect(() => {
-    const fetchBreaks = async () => {
-      const { data, error } = await supabase
-        .from('breaks_monitoring')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .maybeSingle();
-      if (!error && data) {
-        setBreakData(data);
-      }
-    };
-    fetchBreaks();
-  }, [user.id, today]);
-
-  const formatTime = (totalSeconds) => {
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = totalSeconds % 60;
-    return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(hrs > 0 ? 2 : 1, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const totalSecs = breakData.total_break_seconds || 0;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{user.name}'s Break History</h2>
-              <p className="text-sm text-gray-500">Today: {today}</p>
-            </div>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-        <div className="p-6 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <Card className="p-4 bg-purple-50 border-purple-100">
-              <p className="text-sm font-semibold text-purple-600">Total Break Time</p>
-              <p className="text-2xl font-bold text-purple-900">{formatTime(totalSecs)}</p>
-            </Card>
-            <Card className="p-4 bg-indigo-50 border-indigo-100">
-              <p className="text-sm font-semibold text-indigo-600">Break Count</p>
-              <p className="text-2xl font-bold text-indigo-900">{breakData.breaks.length}</p>
-            </Card>
-          </div>
-
-          <table className="w-full">
-            <thead className="bg-gray-50 text-gray-700">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase">#</th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase">Start</th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase">End</th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase">Duration</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {breakData.breaks.map((b, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm">{i + 1}</td>
-                  <td className="px-4 py-3 text-sm">{new Date(b.startTime).toLocaleTimeString()}</td>
-                  <td className="px-4 py-3 text-sm">{new Date(b.endTime).toLocaleTimeString()}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-purple-600">
-                    {b.durationSeconds
-                      ? `${Math.floor(b.durationSeconds / 60)}:${(b.durationSeconds % 60).toString().padStart(2, '0')}`
-                      : `${b.duration} min`}
-                  </td>
-                </tr>
-              ))}
-              {breakData.breaks.length === 0 && (
-                <tr>
-                  <td colSpan="4" className="px-4 py-8 text-center text-gray-500">No breaks taken today.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-};
-
-// Admin Dashboard
-const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [leads, setLeads] = useState([]);
-  const [filteredLeads, setFilteredLeads] = useState([]);
-  const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
-    agent: '',
-    campaign: '',
-    onlyStale: false
-  });
-  const [currentPage, setCurrentPage] = useState(1);
-  const LEADS_PER_PAGE = 10;
-  const [users, setUsers] = useState([]);
-  const [campaigns, setCampaigns] = useState([]);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [showCampaignModal, setShowCampaignModal] = useState(false);
-  const [showEditLeadModal, setShowEditLeadModal] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [editingCampaign, setEditingCampaign] = useState(null);
-  const [editingLead, setEditingLead] = useState(null);
-  const [stats, setStats] = useState({});
-  const [showAdminBreakHistory, setShowAdminBreakHistory] = useState(false);
-  const [selectedUserForBreaks, setSelectedUserForBreaks] = useState(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, userId: null, userName: '' });
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const [breakFilters, setBreakFilters] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
-  });
-  const [selectedLeads, setSelectedLeads] = useState([]);
-  const [showBulkDeleteLeadsConfirm, setShowBulkDeleteLeadsConfirm] = useState(false);
-  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
-  const [bulkEditForm, setBulkEditForm] = useState({ status: '', campaign: '' });
-  const [allBreaks, setAllBreaks] = useState([]);
-
-  const formatTime = (ts) => {
-    const h = Math.floor(ts / 3600);
-    const m = Math.floor((ts % 3600) / 60);
-    const s = ts % 60;
-    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  useEffect(() => {
-    loadData();
-
-    // Subscribe to real-time updates for breaks_monitoring
+  // Admin Break History Modal
+  const AdminBreakHistoryModal = ({ user, onClose }) => {
+    const [breakData, setBreakData] = useState({ total_break_seconds: 0, breaks: [] });
     const today = new Date().toISOString().split('T')[0];
-    const channel = supabase
-      .channel('admin_breaks_monitoring')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'breaks_monitoring',
-          filter: `date=eq.${today}`
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setAllBreaks(prev => [...prev, payload.new]);
-          } else if (payload.eventType === 'UPDATE') {
-            setAllBreaks(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
-          } else if (payload.eventType === 'DELETE') {
-            setAllBreaks(prev => prev.filter(b => b.id === payload.old.id));
-          }
+
+    useEffect(() => {
+      const fetchBreaks = async () => {
+        const { data, error } = await supabase
+          .from('breaks_monitoring')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .maybeSingle();
+        if (!error && data) {
+          setBreakData(data);
         }
-      )
-      .subscribe();
+      };
+      fetchBreaks();
+    }, [user.id, today]);
 
-    return () => {
-      supabase.removeChannel(channel);
+    const formatTime = (totalSeconds) => {
+      const hrs = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+      return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(hrs > 0 ? 2 : 1, '0')}:${secs.toString().padStart(2, '0')}`;
     };
-  }, []);
 
+    const totalSecs = breakData.total_break_seconds || 0;
 
-  const loadData = async () => {
-    const { data: leadsData } = await supabase.from('leads').select('*');
-    const { data: usersData } = await supabase.from('profiles').select('*');
-    const { data: campaignsData } = await supabase.from('campaigns').select('*');
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{user.name}'s Break History</h2>
+                <p className="text-sm text-gray-500">Today: {today}</p>
+              </div>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+          <div className="p-6 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <Card className="p-4 bg-purple-50 border-purple-100">
+                <p className="text-sm font-semibold text-purple-600">Total Break Time</p>
+                <p className="text-2xl font-bold text-purple-900">{formatTime(totalSecs)}</p>
+              </Card>
+              <Card className="p-4 bg-indigo-50 border-indigo-100">
+                <p className="text-sm font-semibold text-indigo-600">Break Count</p>
+                <p className="text-2xl font-bold text-indigo-900">{breakData.breaks.length}</p>
+              </Card>
+            </div>
 
-    const today = new Date().toISOString().split('T')[0];
-    const { data: breaksData } = await supabase
-      .from('breaks_monitoring')
-      .select('*')
-      .eq('date', today);
-
-    setLeads(leadsData || []);
-    setFilteredLeads(leadsData || []);
-    setUsers(usersData || []);
-    setCampaigns(campaignsData || []);
-    setAllBreaks(breaksData || []);
-
-    setStats({
-      totalLeads: (leadsData || []).length,
-      totalUsers: (usersData || []).length,
-      qualified: (leadsData || []).filter(l => l.status === 'qualified').length,
-      disqualified: (leadsData || []).filter(l => l.status === 'disqualified').length,
-      employees: (usersData || []).filter(u => u.role === 'employee').length,
-      qaUsers: (usersData || []).filter(u => u.role === 'qa').length,
-      totalCampaigns: (campaignsData || []).length,
-      activeCampaigns: (campaignsData || []).filter(c => c.is_active).length,
-      activeBreaks: (breaksData || []).filter(b => b.current_break_start).length
-    });
-  };
-
-  const initiateDeleteUser = (user) => {
-    setDeleteConfirmation({ isOpen: true, userId: user.id, userName: user.name });
-  };
-
-  const confirmDeleteUser = async () => {
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', deleteConfirmation.userId);
-
-    if (!error) {
-      loadData();
-      setDeleteConfirmation({ isOpen: false, userId: null, userName: '' });
-    } else {
-      alert('Error deleting user profile: ' + error.message);
-    }
-  };
-
-  const handleSelectAllUsers = (e) => {
-    if (e.target.checked) {
-      const nonAdminIds = users.filter(u => u.role !== 'admin').map(u => u.id);
-      setSelectedUsers(nonAdminIds);
-    } else {
-      setSelectedUsers([]);
-    }
-  };
-
-  const handleSelectUser = (userId) => {
-    setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
-  };
-
-  const handleSelectAllLeads = (e) => {
-    if (e.target.checked) {
-      setSelectedLeads(paginatedLeads.map(l => l.id));
-    } else {
-      setSelectedLeads([]);
-    }
-  };
-
-  const handleSelectLead = (leadId) => {
-    setSelectedLeads(prev =>
-      prev.includes(leadId) ? prev.filter(id => id !== leadId) : [...prev, leadId]
+            <table className="w-full">
+              <thead className="bg-gray-50 text-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase">#</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase">Start</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase">End</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase">Duration</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {breakData.breaks.map((b, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm">{i + 1}</td>
+                    <td className="px-4 py-3 text-sm">{new Date(b.startTime).toLocaleTimeString()}</td>
+                    <td className="px-4 py-3 text-sm">{new Date(b.endTime).toLocaleTimeString()}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-purple-600">
+                      {b.durationSeconds
+                        ? `${Math.floor(b.durationSeconds / 60)}:${(b.durationSeconds % 60).toString().padStart(2, '0')}`
+                        : `${b.duration} min`}
+                    </td>
+                  </tr>
+                ))}
+                {breakData.breaks.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="px-4 py-8 text-center text-gray-500">No breaks taken today.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
     );
   };
 
-  const confirmBulkDeleteLeads = async () => {
-    const { error } = await supabase
-      .from('leads')
-      .delete()
-      .in('id', selectedLeads);
+  // Admin Dashboard
+  const AdminDashboard = () => {
+    const [activeTab, setActiveTab] = useState('overview');
+    const [leads, setLeads] = useState([]);
+    const [filteredLeads, setFilteredLeads] = useState([]);
+    const [filters, setFilters] = useState({
+      startDate: '',
+      endDate: '',
+      agent: '',
+      campaign: '',
+      onlyStale: false
+    });
+    const [currentPage, setCurrentPage] = useState(1);
+    const LEADS_PER_PAGE = 10;
+    const [users, setUsers] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [showCampaignModal, setShowCampaignModal] = useState(false);
+    const [showEditLeadModal, setShowEditLeadModal] = useState(false);
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
+    const [editingCampaign, setEditingCampaign] = useState(null);
+    const [editingLead, setEditingLead] = useState(null);
+    const [stats, setStats] = useState({});
+    const [showAdminBreakHistory, setShowAdminBreakHistory] = useState(false);
+    const [selectedUserForBreaks, setSelectedUserForBreaks] = useState(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, userId: null, userName: '' });
+    const [selectedUsers, setSelectedUsers] = useState([]);
+    const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+    const [breakFilters, setBreakFilters] = useState({
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0]
+    });
+    const [selectedLeads, setSelectedLeads] = useState([]);
+    const [showBulkDeleteLeadsConfirm, setShowBulkDeleteLeadsConfirm] = useState(false);
+    const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+    const [bulkEditForm, setBulkEditForm] = useState({ status: '', campaign: '' });
+    const [allBreaks, setAllBreaks] = useState([]);
 
-    if (!error) {
+    const formatTime = (ts) => {
+      const h = Math.floor(ts / 3600);
+      const m = Math.floor((ts % 3600) / 60);
+      const s = ts % 60;
+      return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
       loadData();
-      setSelectedLeads([]);
-      setShowBulkDeleteLeadsConfirm(false);
-    } else {
-      alert('Error deleting leads: ' + error.message);
-    }
-  };
 
-  const handleBulkUpdateLeads = async () => {
-    if (!bulkEditForm.status && !bulkEditForm.campaign) {
-      alert('Please select at least one property to update.');
-      return;
-    }
+      // Subscribe to real-time updates for breaks_monitoring
+      const today = new Date().toISOString().split('T')[0];
+      const channel = supabase
+        .channel('admin_breaks_monitoring')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'breaks_monitoring',
+            filter: `date=eq.${today}`
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setAllBreaks(prev => [...prev, payload.new]);
+            } else if (payload.eventType === 'UPDATE') {
+              setAllBreaks(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
+            } else if (payload.eventType === 'DELETE') {
+              setAllBreaks(prev => prev.filter(b => b.id === payload.old.id));
+            }
+          }
+        )
+        .subscribe();
 
-    const updates = {};
-    if (bulkEditForm.status) updates.status = bulkEditForm.status;
-    if (bulkEditForm.campaign) updates.campaign = bulkEditForm.campaign;
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, []);
 
-    const { error } = await supabase
-      .from('leads')
-      .update(updates)
-      .in('id', selectedLeads);
 
-    if (!error) {
-      loadData();
-      setSelectedLeads([]);
-      setShowBulkEditModal(false);
-      setBulkEditForm({ status: '', campaign: '' });
-    } else {
-      alert('Error updating leads: ' + error.message);
-    }
-  };
+    const loadData = async () => {
+      const { data: leadsData } = await supabase.from('leads').select('*');
+      const { data: usersData } = await supabase.from('profiles').select('*');
+      const { data: campaignsData } = await supabase.from('campaigns').select('*');
 
-  const confirmBulkDeleteUsers = async () => {
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .in('id', selectedUsers);
+      const today = new Date().toISOString().split('T')[0];
+      const { data: breaksData } = await supabase
+        .from('breaks_monitoring')
+        .select('*')
+        .eq('date', today);
 
-    if (!error) {
-      loadData();
-      setSelectedUsers([]);
-      setShowBulkDeleteConfirm(false);
-    } else {
-      alert('Error in bulk delete: ' + error.message);
-    }
-  };
+      setLeads(leadsData || []);
+      setFilteredLeads(leadsData || []);
+      setUsers(usersData || []);
+      setCampaigns(campaignsData || []);
+      setAllBreaks(breaksData || []);
 
-  const resetPassword = (userId) => {
-    alert('Password reset requires Supabase Admin privileges or an email reset flow. Please use the Supabase dashboard to reset user passwords for now.');
-  };
+      setStats({
+        totalLeads: (leadsData || []).length,
+        totalUsers: (usersData || []).length,
+        qualified: (leadsData || []).filter(l => l.status === 'qualified').length,
+        disqualified: (leadsData || []).filter(l => l.status === 'disqualified').length,
+        employees: (usersData || []).filter(u => u.role === 'employee').length,
+        qaUsers: (usersData || []).filter(u => u.role === 'qa').length,
+        totalCampaigns: (campaignsData || []).length,
+        activeCampaigns: (campaignsData || []).filter(c => c.is_active).length,
+        activeBreaks: (breaksData || []).filter(b => b.current_break_start).length
+      });
+    };
 
-  const deleteCampaign = async (campaignId) => {
-    if (window.confirm('Are you sure you want to delete this campaign?')) {
+    const initiateDeleteUser = (user) => {
+      setDeleteConfirmation({ isOpen: true, userId: user.id, userName: user.name });
+    };
+
+    const confirmDeleteUser = async () => {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', deleteConfirmation.userId);
+
+      if (!error) {
+        loadData();
+        setDeleteConfirmation({ isOpen: false, userId: null, userName: '' });
+      } else {
+        alert('Error deleting user profile: ' + error.message);
+      }
+    };
+
+    const handleSelectAllUsers = (e) => {
+      if (e.target.checked) {
+        const nonAdminIds = users.filter(u => u.role !== 'admin').map(u => u.id);
+        setSelectedUsers(nonAdminIds);
+      } else {
+        setSelectedUsers([]);
+      }
+    };
+
+    const handleSelectUser = (userId) => {
+      setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+    };
+
+    const handleSelectAllLeads = (e) => {
+      if (e.target.checked) {
+        setSelectedLeads(paginatedLeads.map(l => l.id));
+      } else {
+        setSelectedLeads([]);
+      }
+    };
+
+    const handleSelectLead = (leadId) => {
+      setSelectedLeads(prev =>
+        prev.includes(leadId) ? prev.filter(id => id !== leadId) : [...prev, leadId]
+      );
+    };
+
+    const confirmBulkDeleteLeads = async () => {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .in('id', selectedLeads);
+
+      if (!error) {
+        loadData();
+        setSelectedLeads([]);
+        setShowBulkDeleteLeadsConfirm(false);
+      } else {
+        alert('Error deleting leads: ' + error.message);
+      }
+    };
+
+    const handleBulkUpdateLeads = async () => {
+      if (!bulkEditForm.status && !bulkEditForm.campaign) {
+        alert('Please select at least one property to update.');
+        return;
+      }
+
+      const updates = {};
+      if (bulkEditForm.status) updates.status = bulkEditForm.status;
+      if (bulkEditForm.campaign) updates.campaign = bulkEditForm.campaign;
+
+      const { error } = await supabase
+        .from('leads')
+        .update(updates)
+        .in('id', selectedLeads);
+
+      if (!error) {
+        loadData();
+        setSelectedLeads([]);
+        setShowBulkEditModal(false);
+        setBulkEditForm({ status: '', campaign: '' });
+      } else {
+        alert('Error updating leads: ' + error.message);
+      }
+    };
+
+    const confirmBulkDeleteUsers = async () => {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .in('id', selectedUsers);
+
+      if (!error) {
+        loadData();
+        setSelectedUsers([]);
+        setShowBulkDeleteConfirm(false);
+      } else {
+        alert('Error in bulk delete: ' + error.message);
+      }
+    };
+
+    const resetPassword = (userId) => {
+      alert('Password reset requires Supabase Admin privileges or an email reset flow. Please use the Supabase dashboard to reset user passwords for now.');
+    };
+
+    const deleteCampaign = async (campaignId) => {
+      if (window.confirm('Are you sure you want to delete this campaign?')) {
+        const { error } = await supabase
+          .from('campaigns')
+          .delete()
+          .eq('id', campaignId);
+
+        if (!error) {
+          loadData();
+        } else {
+          alert('Error deleting campaign: ' + error.message);
+        }
+      }
+    };
+
+    const toggleCampaignStatus = async (campaignId) => {
+      const campaign = campaigns.find(c => c.id === campaignId);
       const { error } = await supabase
         .from('campaigns')
-        .delete()
+        .update({ is_active: !campaign.is_active })
         .eq('id', campaignId);
 
       if (!error) {
         loadData();
-      } else {
-        alert('Error deleting campaign: ' + error.message);
       }
-    }
-  };
+    };
 
-  const toggleCampaignStatus = async (campaignId) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    const { error } = await supabase
-      .from('campaigns')
-      .update({ is_active: !campaign.is_active })
-      .eq('id', campaignId);
+    const applyFilters = () => {
+      let filtered = [...leads];
 
-    if (!error) {
-      loadData();
-    }
-  };
-
-  const applyFilters = () => {
-    let filtered = [...leads];
-
-    if (filters.startDate) {
-      filtered = filtered.filter(lead => lead.date >= filters.startDate);
-    }
-    if (filters.endDate) {
-      filtered = filtered.filter(lead => lead.date <= filters.endDate);
-    }
-    if (filters.agent) {
-      filtered = filtered.filter(lead => (lead.ra_name || '').toLowerCase().includes(filters.agent.toLowerCase()));
-    }
-    if (filters.campaign) {
-      filtered = filtered.filter(lead => (lead.campaign || '').toLowerCase().includes(filters.campaign.toLowerCase()));
-    }
-    if (filters.onlyStale) {
-      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-      filtered = filtered.filter(lead => new Date(lead.updated_at) < fortyEightHoursAgo);
-    }
-
-    setFilteredLeads(filtered);
-    setCurrentPage(1);
-  };
-
-  const handleClearFilters = () => {
-    setFilters({ startDate: '', endDate: '', agent: '', campaign: '' });
-    setFilteredLeads(leads);
-    setCurrentPage(1);
-  };
-
-  const downloadLeads = () => {
-    const leadsToDownload = filteredLeads;
-
-    if (leadsToDownload.length === 0) {
-      alert('No leads to download.');
-      return;
-    }
-
-    const headers = [
-      'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
-      'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link',
-      'Phone', 'Direct Dial', 'Address', 'City', 'State', 'Zip', 'Country',
-      'Industry', 'Industry Link', 'Employee Size', 'Associated Members', 'Employee Size Link',
-      'Revenue Size', 'Revenue Size Link', 'Tenure', 'VV Status', 'Status', 'RA Comments',
-      'Additional Details'
-    ];
-
-    const rows = leadsToDownload.map(lead => {
-      let customDetails = '';
-      if (lead.campaign && lead.custom_question_responses) {
-        const campaignObj = campaigns.find(c => c.name === lead.campaign);
-        if (campaignObj && campaignObj.custom_questions) {
-          customDetails = campaignObj.custom_questions
-            .map(q => {
-              const answer = lead.custom_question_responses[q.id];
-              return answer ? `${q.question}: ${answer}` : null;
-            })
-            .filter(Boolean)
-            .join(' | ');
-        }
+      if (filters.startDate) {
+        filtered = filtered.filter(lead => lead.date >= filters.startDate);
+      }
+      if (filters.endDate) {
+        filtered = filtered.filter(lead => lead.date <= filters.endDate);
+      }
+      if (filters.agent) {
+        filtered = filtered.filter(lead => (lead.ra_name || '').toLowerCase().includes(filters.agent.toLowerCase()));
+      }
+      if (filters.campaign) {
+        filtered = filtered.filter(lead => (lead.campaign || '').toLowerCase().includes(filters.campaign.toLowerCase()));
+      }
+      if (filters.onlyStale) {
+        const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+        filtered = filtered.filter(lead => new Date(lead.updated_at) < fortyEightHoursAgo);
       }
 
-      return [
-        lead.date,
-        lead.ra_name,
-        lead.campaign || '',
-        lead.company_name,
-        lead.salutation,
-        lead.first_name,
-        lead.last_name,
-        lead.email,
-        lead.domain,
-        lead.job_title,
-        lead.department,
-        lead.job_level,
-        lead.job_title_link,
-        lead.phone_no,
-        lead.direct_dial,
-        lead.address1,
-        lead.city,
-        lead.state,
-        lead.zip_code,
-        lead.country,
-        lead.industry_type,
-        lead.industry_type_link,
-        lead.employee_size,
-        lead.associated_members || '',
-        lead.employee_size_link,
-        lead.revenue_size || '',
-        lead.revenue_size_link || '',
-        lead.tenure || '',
-        lead.vv_status || '',
-        lead.status,
-        lead.ra_comments,
-        customDetails
+      setFilteredLeads(filtered);
+      setCurrentPage(1);
+    };
+
+    const handleClearFilters = () => {
+      setFilters({ startDate: '', endDate: '', agent: '', campaign: '' });
+      setFilteredLeads(leads);
+      setCurrentPage(1);
+    };
+
+    const downloadLeads = () => {
+      const leadsToDownload = filteredLeads;
+
+      if (leadsToDownload.length === 0) {
+        alert('No leads to download.');
+        return;
+      }
+
+      const headers = [
+        'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
+        'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link',
+        'Phone', 'Direct Dial', 'Address', 'City', 'State', 'Zip', 'Country',
+        'Industry', 'Industry Link', 'Employee Size', 'Associated Members', 'Employee Size Link',
+        'Revenue Size', 'Revenue Size Link', 'Tenure', 'VV Status', 'Status', 'RA Comments',
+        'Additional Details'
       ];
-    });
 
-    const csvContent = [headers.join(','), ...rows.map(e => e.map(item => `"${(item || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
+      const rows = leadsToDownload.map(lead => {
+        let customDetails = '';
+        if (lead.campaign && lead.custom_question_responses) {
+          const campaignObj = campaigns.find(c => c.name === lead.campaign);
+          if (campaignObj && campaignObj.custom_questions) {
+            customDetails = campaignObj.custom_questions
+              .map(q => {
+                const answer = lead.custom_question_responses[q.id];
+                return answer ? `${q.question}: ${answer}` : null;
+              })
+              .filter(Boolean)
+              .join(' | ');
+          }
+        }
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `admin_leads_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+        return [
+          lead.date,
+          lead.ra_name,
+          lead.campaign || '',
+          lead.company_name,
+          lead.salutation,
+          lead.first_name,
+          lead.last_name,
+          lead.email,
+          lead.domain,
+          lead.job_title,
+          lead.department,
+          lead.job_level,
+          lead.job_title_link,
+          lead.phone_no,
+          lead.direct_dial,
+          lead.address1,
+          lead.city,
+          lead.state,
+          lead.zip_code,
+          lead.country,
+          lead.industry_type,
+          lead.industry_type_link,
+          lead.employee_size,
+          lead.associated_members || '',
+          lead.employee_size_link,
+          lead.revenue_size || '',
+          lead.revenue_size_link || '',
+          lead.tenure || '',
+          lead.vv_status || '',
+          lead.status,
+          lead.ra_comments,
+          customDetails
+        ];
+      });
 
-  const downloadBreakReport = async () => {
-    if (!breakFilters.startDate || !breakFilters.endDate) {
-      alert('Please select both start and end dates');
-      return;
-    }
+      const csvContent = [headers.join(','), ...rows.map(e => e.map(item => `"${(item || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
 
-    try {
-      const { data, error } = await supabase
-        .from('breaks_monitoring')
-        .select(`
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `admin_leads_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    const downloadBreakReport = async () => {
+      if (!breakFilters.startDate || !breakFilters.endDate) {
+        alert('Please select both start and end dates');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('breaks_monitoring')
+          .select(`
           date,
           total_break_seconds,
           breaks,
           user_id,
           profiles:user_id (name)
         `)
-        .gte('date', breakFilters.startDate)
-        .lte('date', breakFilters.endDate);
+          .gte('date', breakFilters.startDate)
+          .lte('date', breakFilters.endDate);
 
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        alert('No break data found for the selected range');
-        return;
-      }
-
-      // Flatten the data: one row per break session
-      const rows = [['Agent Name', 'Date', 'Start Time', 'End Time', 'Duration', 'Daily Total']];
-
-      data.forEach(record => {
-        const agentName = record.profiles?.name || 'Unknown';
-        const date = record.date;
-        const dailyTotal = formatTime(record.total_break_seconds);
-
-        if (record.breaks && record.breaks.length > 0) {
-          record.breaks.forEach(b => {
-            const startStr = new Date(b.startTime).toLocaleTimeString();
-            const endStr = b.endTime ? new Date(b.endTime).toLocaleTimeString() : 'In Progress';
-            const duration = b.durationSeconds
-              ? `${Math.floor(b.durationSeconds / 60)}:${(b.durationSeconds % 60).toString().padStart(2, '0')}`
-              : (b.duration ? `${b.duration} min` : '-');
-
-            rows.push([agentName, date, startStr, endStr, duration, dailyTotal]);
-          });
-        } else {
-          rows.push([agentName, date, '-', '-', '0:00', dailyTotal]);
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          alert('No break data found for the selected range');
+          return;
         }
-      });
 
-      const csvContent = rows.map(r => r.join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `break_report_${breakFilters.startDate}_to_${breakFilters.endDate}.csv`;
-      a.click();
-    } catch (err) {
-      console.error('Error downloading break report:', err);
-      alert('Failed to generate report: ' + err.message);
-    }
-  };
+        // Flatten the data: one row per break session
+        const rows = [['Agent Name', 'Date', 'Start Time', 'End Time', 'Duration', 'Daily Total']];
 
-  const paginatedLeads = filteredLeads.slice(
-    (currentPage - 1) * LEADS_PER_PAGE,
-    currentPage * LEADS_PER_PAGE
-  );
+        data.forEach(record => {
+          const agentName = record.profiles?.name || 'Unknown';
+          const date = record.date;
+          const dailyTotal = formatTime(record.total_break_seconds);
 
-  const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE);
+          if (record.breaks && record.breaks.length > 0) {
+            record.breaks.forEach(b => {
+              const startStr = new Date(b.startTime).toLocaleTimeString();
+              const endStr = b.endTime ? new Date(b.endTime).toLocaleTimeString() : 'In Progress';
+              const duration = b.durationSeconds
+                ? `${Math.floor(b.durationSeconds / 60)}:${(b.durationSeconds % 60).toString().padStart(2, '0')}`
+                : (b.duration ? `${b.duration} min` : '-');
 
-  return (
-    <div className="space-y-6">
-      {/* Tab Navigation */}
-      <Card className="p-2">
-        <div className="flex gap-2">
-          <Button
-            variant={activeTab === 'overview' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('overview')}
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Overview
-          </Button>
-          <Button
-            variant={activeTab === 'leads' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('leads')}
-          >
-            <Users className="w-4 h-4 mr-2" />
-            All Leads
-          </Button>
-          <Button
-            variant={activeTab === 'users' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('users')}
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Manage Users
-          </Button>
-          <Button
-            variant={activeTab === 'campaigns' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('campaigns')}
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Campaigns
-          </Button>
-          <Button
-            variant={activeTab === 'breaks' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('breaks')}
-          >
-            <Coffee className="w-4 h-4 mr-2" />
-            Break Monitoring
-          </Button>
-          <Button
-            variant={activeTab === 'reports' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('reports')}
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Performance Reports
-          </Button>
-        </div>
-      </Card>
+              rows.push([agentName, date, startStr, endStr, duration, dailyTotal]);
+            });
+          } else {
+            rows.push([agentName, date, '-', '-', '0:00', dailyTotal]);
+          }
+        });
 
-      {/* Overview Tab */}
-      {activeTab === 'overview' && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-blue-600 mb-1">Total Leads</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.totalLeads}</p>
-                </div>
-                <BarChart3 className="w-10 h-10 text-blue-600 opacity-50" />
-              </div>
-            </Card>
+        const csvContent = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `break_report_${breakFilters.startDate}_to_${breakFilters.endDate}.csv`;
+        a.click();
+      } catch (err) {
+        console.error('Error downloading break report:', err);
+        alert('Failed to generate report: ' + err.message);
+      }
+    };
 
-            <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-green-600 mb-1">Qualified</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.qualified}</p>
-                </div>
-                <CheckCircle className="w-10 h-10 text-green-600 opacity-50" />
-              </div>
-            </Card>
+    const paginatedLeads = filteredLeads.slice(
+      (currentPage - 1) * LEADS_PER_PAGE,
+      currentPage * LEADS_PER_PAGE
+    );
 
-            <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-red-600 mb-1">Disqualified</p>
-                  <p className="text-3xl font-bold text-red-900">{stats.disqualified}</p>
-                </div>
-                <XCircle className="w-10 h-10 text-red-600 opacity-50" />
-              </div>
-            </Card>
+    const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE);
 
-            <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-purple-600 mb-1">Active Breaks</p>
-                  <p className="text-3xl font-bold text-purple-900">
-                    {allBreaks.filter(b => b.current_break_start).length}
-                  </p>
-                </div>
-                <Coffee className="w-10 h-10 text-purple-600 opacity-50" />
-              </div>
-            </Card>
+    return (
+      <div className="space-y-6">
+        {/* Tab Navigation */}
+        <Card className="p-2">
+          <div className="flex gap-2">
+            <Button
+              variant={activeTab === 'overview' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('overview')}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Overview
+            </Button>
+            <Button
+              variant={activeTab === 'leads' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('leads')}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              All Leads
+            </Button>
+            <Button
+              variant={activeTab === 'users' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('users')}
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Manage Users
+            </Button>
+            <Button
+              variant={activeTab === 'campaigns' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('campaigns')}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Campaigns
+            </Button>
+            <Button
+              variant={activeTab === 'breaks' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('breaks')}
+            >
+              <Coffee className="w-4 h-4 mr-2" />
+              Break Monitoring
+            </Button>
+            <Button
+              variant={activeTab === 'reports' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('reports')}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Performance Reports
+            </Button>
           </div>
+        </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">User Statistics</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Users</span>
-                  <span className="font-bold text-gray-900">{stats.totalUsers}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Employees</span>
-                  <span className="font-bold text-gray-900">{stats.employees}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">QA Users</span>
-                  <span className="font-bold text-gray-900">{stats.qaUsers}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                  <span className="text-purple-600 font-semibold">Agents on Break</span>
-                  <span className="font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded">
-                    {allBreaks.filter(b => b.current_break_start).length}
-                  </span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Lead Conversion Rate</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Qualification Rate</span>
-                  <span className="font-bold text-green-600">
-                    {stats.totalLeads > 0 ? ((stats.qualified / stats.totalLeads) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Disqualification Rate</span>
-                  <span className="font-bold text-red-600">
-                    {stats.totalLeads > 0 ? ((stats.disqualified / stats.totalLeads) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </>
-      )}
-
-      {/* All Leads Tab */}
-      {activeTab === 'leads' && (
-        <div className="space-y-6">
-          {/* Filters */}
-          <Card className="p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Filters</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Input
-                label="Start Date"
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-              />
-              <Input
-                label="End Date"
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-              />
-              <Input
-                label="Agent Name"
-                value={filters.agent}
-                onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
-                placeholder="Search by agent name"
-              />
-              <SearchableSelect
-                label="Campaign Name"
-                value={filters.campaign}
-                onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
-                placeholder="Search campaign..."
-                options={campaigns.filter(c => c.is_active).map(c => ({ value: c.name, label: c.name }))}
-              />
-              <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1">
-                <Button
-                  onClick={applyFilters}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transform transition-all hover:-translate-y-0.5 flex items-center justify-center whitespace-nowrap"
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  Apply
-                </Button>
-                <Button
-                  variant={filters.onlyStale ? 'primary' : 'secondary'}
-                  onClick={() => {
-                    const nextStale = !filters.onlyStale;
-                    setFilters({ ...filters, onlyStale: nextStale });
-                  }}
-                  title="Stale Leads (>48h)"
-                  className={filters.onlyStale ? 'bg-red-50 text-red-600 border-red-200' : ''}
-                >
-                  <AlertTriangle className={`w-4 h-4 ${filters.onlyStale ? 'animate-pulse' : ''}`} />
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleClearFilters}
-                  title="Clear Filters"
-                  className="px-3"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
-                <Button variant="secondary" onClick={downloadLeads} title="Download filtered leads">
-                  <Download className="w-4 h-4" />
-                </Button>
-                <Button onClick={() => setShowUploadModal(true)} title="Upload Leads" className="px-3">
-                  <Upload className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Bulk Actions */}
-          {selectedLeads.length > 0 && (
-            <Card className="p-4 bg-indigo-50 border-indigo-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
-              <p className="text-sm font-semibold text-indigo-900">
-                {selectedLeads.length} lead(s) selected
-              </p>
-              <div className="flex gap-2">
-                <Button variant="primary" onClick={() => setShowBulkEditModal(true)}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Modify Selected
-                </Button>
-                <Button variant="danger" onClick={() => setShowBulkDeleteLeadsConfirm(true)}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Selected
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                  <tr>
-                    <th className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        onChange={handleSelectAllLeads}
-                        checked={selectedLeads.length === paginatedLeads.length && paginatedLeads.length > 0}
-                      />
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Contact</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {paginatedLeads.map(lead => {
-                    const isStale = new Date(lead.updated_at) < new Date(Date.now() - 48 * 60 * 60 * 1000);
-                    return (
-                      <tr key={lead.id} className={`hover:bg-gray-50 transition-colors ${isStale ? 'bg-red-50/50' : ''}`}>
-                        <td className="px-6 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedLeads.includes(lead.id)}
-                            onChange={() => handleSelectLead(lead.id)}
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {lead.first_name} {lead.last_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                            lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                            {lead.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex items-center gap-3">
-                            {isStale && (
-                              <AlertTriangle
-                                className="w-4 h-4 text-red-500 animate-pulse"
-                                title="Lead hasn't been updated in >48 hours"
-                              />
-                            )}
-                            <button
-                              onClick={() => { setEditingLead(lead); setShowEditLeadModal(true); }}
-                              className="text-indigo-600 hover:text-indigo-700"
-                              title="Edit Lead"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card>
-          {/* Edit Lead Modal */}
-          {
-            showEditLeadModal && (
-              <UploadLeadModal
-                onClose={() => { setShowEditLeadModal(false); setEditingLead(null); }}
-                onSuccess={() => { loadData(); setShowEditLeadModal(false); setEditingLead(null); }}
-                employeeId={editingLead?.employee_id}
-                employeeName={editingLead?.ra_name}
-                leadToEdit={editingLead}
-              />
-            )
-          }
-          {/* Upload Modal */}
-          {
-            showUploadModal && (
-              <UploadLeadModal
-                onClose={() => setShowUploadModal(false)}
-                onSuccess={loadData}
-                employeeId={'admin'}
-                employeeName={'Admin'}
-              />
-            )
-          }
-          {/* Bulk Delete Confirmation Modal */}
-          {
-            showBulkDeleteLeadsConfirm && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-                <Card className="w-full max-w-md p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Bulk Delete</h3>
-                  <p className="text-gray-600 mb-6">
-                    Are you sure you want to delete these {selectedLeads.length} leads? This action cannot be undone.
-                  </p>
-                  <div className="flex justify-end gap-3">
-                    <Button variant="secondary" onClick={() => setShowBulkDeleteLeadsConfirm(false)}>
-                      Cancel
-                    </Button>
-                    <Button variant="danger" onClick={confirmBulkDeleteLeads}>
-                      Delete Selected
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-            )
-          }
-        </div >
-      )}
-
-      {/* Manage Users Tab */}
-      {
-        activeTab === 'users' && (
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
           <>
-            <div className="flex justify-end gap-2">
-              {selectedUsers.length > 0 && (
-                <Button variant="danger" onClick={() => setShowBulkDeleteConfirm(true)}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Selected ({selectedUsers.length})
-                </Button>
-              )}
-              <Button onClick={() => { setEditingUser(null); setShowUserModal(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add User
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-600 mb-1">Total Leads</p>
+                    <p className="text-3xl font-bold text-blue-900">{stats.totalLeads}</p>
+                  </div>
+                  <BarChart3 className="w-10 h-10 text-blue-600 opacity-50" />
+                </div>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-green-600 mb-1">Qualified</p>
+                    <p className="text-3xl font-bold text-green-900">{stats.qualified}</p>
+                  </div>
+                  <CheckCircle className="w-10 h-10 text-green-600 opacity-50" />
+                </div>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-red-600 mb-1">Disqualified</p>
+                    <p className="text-3xl font-bold text-red-900">{stats.disqualified}</p>
+                  </div>
+                  <XCircle className="w-10 h-10 text-red-600 opacity-50" />
+                </div>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-600 mb-1">Active Breaks</p>
+                    <p className="text-3xl font-bold text-purple-900">
+                      {allBreaks.filter(b => b.current_break_start).length}
+                    </p>
+                  </div>
+                  <Coffee className="w-10 h-10 text-purple-600 opacity-50" />
+                </div>
+              </Card>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">User Statistics</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Total Users</span>
+                    <span className="font-bold text-gray-900">{stats.totalUsers}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Employees</span>
+                    <span className="font-bold text-gray-900">{stats.employees}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">QA Users</span>
+                    <span className="font-bold text-gray-900">{stats.qaUsers}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="text-purple-600 font-semibold">Agents on Break</span>
+                    <span className="font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                      {allBreaks.filter(b => b.current_break_start).length}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Lead Conversion Rate</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Qualification Rate</span>
+                    <span className="font-bold text-green-600">
+                      {stats.totalLeads > 0 ? ((stats.qualified / stats.totalLeads) * 100).toFixed(1) : 0}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Disqualification Rate</span>
+                    <span className="font-bold text-red-600">
+                      {stats.totalLeads > 0 ? ((stats.disqualified / stats.totalLeads) * 100).toFixed(1) : 0}%
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {/* All Leads Tab */}
+        {activeTab === 'leads' && (
+          <div className="space-y-6">
+            {/* Filters */}
+            <Card className="p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Filters</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Input
+                  label="Start Date"
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                />
+                <Input
+                  label="End Date"
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                />
+                <Input
+                  label="Agent Name"
+                  value={filters.agent}
+                  onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
+                  placeholder="Search by agent name"
+                />
+                <SearchableSelect
+                  label="Campaign Name"
+                  value={filters.campaign}
+                  onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
+                  placeholder="Search campaign..."
+                  options={campaigns.filter(c => c.is_active).map(c => ({ value: c.name, label: c.name }))}
+                />
+                <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1">
+                  <Button
+                    onClick={applyFilters}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transform transition-all hover:-translate-y-0.5 flex items-center justify-center whitespace-nowrap"
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    Apply
+                  </Button>
+                  <Button
+                    variant={filters.onlyStale ? 'primary' : 'secondary'}
+                    onClick={() => {
+                      const nextStale = !filters.onlyStale;
+                      setFilters({ ...filters, onlyStale: nextStale });
+                    }}
+                    title="Stale Leads (>48h)"
+                    className={filters.onlyStale ? 'bg-red-50 text-red-600 border-red-200' : ''}
+                  >
+                    <AlertTriangle className={`w-4 h-4 ${filters.onlyStale ? 'animate-pulse' : ''}`} />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleClearFilters}
+                    title="Clear Filters"
+                    className="px-3"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                  <Button variant="secondary" onClick={downloadLeads} title="Download filtered leads">
+                    <Download className="w-4 h-4" />
+                  </Button>
+                  <Button onClick={() => setShowUploadModal(true)} title="Upload Leads" className="px-3">
+                    <Upload className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Bulk Actions */}
+            {selectedLeads.length > 0 && (
+              <Card className="p-4 bg-indigo-50 border-indigo-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p className="text-sm font-semibold text-indigo-900">
+                  {selectedLeads.length} lead(s) selected
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="primary" onClick={() => setShowBulkEditModal(true)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Modify Selected
+                  </Button>
+                  <Button variant="danger" onClick={() => setShowBulkDeleteLeadsConfirm(true)}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Selected
+                  </Button>
+                </div>
+              </Card>
+            )}
 
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
@@ -3224,1023 +3060,1184 @@ const AdminDashboard = () => {
                       <th className="px-6 py-4">
                         <input
                           type="checkbox"
-                          onChange={handleSelectAllUsers}
-                          checked={users.some(u => u.role !== 'admin') && selectedUsers.length === users.filter(u => u.role !== 'admin').length}
-                          disabled={!users.some(u => u.role !== 'admin')}
+                          onChange={handleSelectAllLeads}
+                          checked={selectedLeads.length === paginatedLeads.length && paginatedLeads.length > 0}
                         />
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Username</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Role</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {users.map(user => (
-                      <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={() => handleSelectUser(user.id)}
-                            disabled={user.role === 'admin'}
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.username}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                            user.role === 'qa' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => { setEditingUser(user); setShowUserModal(true); }}
-                              className="text-indigo-600 hover:text-indigo-700"
-                              title="Edit User"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => resetPassword(user.id)}
-                              className="text-yellow-600 hover:text-yellow-700"
-                              title="Reset Password"
-                            >
-                              <RefreshCw className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => initiateDeleteUser(user)}
-                              className="text-red-600 hover:text-red-700"
-                              disabled={user.role === 'admin'}
-                              title="Delete User"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-
-            {showUserModal && (
-              <UserModal
-                user={editingUser}
-                onClose={() => setShowUserModal(false)}
-                onSuccess={loadData}
-              />
-            )}
-
-            {showAdminBreakHistory && selectedUserForBreaks && (
-              <AdminBreakHistoryModal
-                user={selectedUserForBreaks}
-                onClose={() => setShowAdminBreakHistory(false)}
-              />
-            )}
-
-            <ConfirmationModal
-              isOpen={deleteConfirmation.isOpen}
-              onClose={() => setDeleteConfirmation({ isOpen: false, userId: null, userName: '' })}
-              onConfirm={confirmDeleteUser}
-              title="Delete User"
-              message={`Are you sure you want to delete user "${deleteConfirmation.userName}"? This action cannot be undone.`}
-            />
-
-            <ConfirmationModal
-              isOpen={showBulkDeleteConfirm}
-              onClose={() => setShowBulkDeleteConfirm(false)}
-              onConfirm={confirmBulkDeleteUsers}
-              title="Bulk Delete Users"
-              message={`Are you sure you want to delete ${selectedUsers.length} selected users? This action cannot be undone.`}
-            />
-
-            {showBulkEditModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-                <Card className="w-full max-w-md p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-900">Modify {selectedLeads.length} Leads</h3>
-                    <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">New Status</label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        value={bulkEditForm.status}
-                        onChange={(e) => setBulkEditForm({ ...bulkEditForm, status: e.target.value })}
-                      >
-                        <option value="">No Change</option>
-                        <option value="pending">Pending</option>
-                        <option value="qualified">Qualified</option>
-                        <option value="disqualified">Disqualified</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">New Campaign</label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        value={bulkEditForm.campaign}
-                        onChange={(e) => setBulkEditForm({ ...bulkEditForm, campaign: e.target.value })}
-                      >
-                        <option value="">No Change</option>
-                        {campaigns.map(c => (
-                          <option key={c.id} value={c.name}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 mt-8">
-                    <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>
-                      Cancel
-                    </Button>
-                    <Button variant="primary" onClick={handleBulkUpdateLeads}>
-                      Apply Changes
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-            )}
-          </>
-        )
-      }
-
-      {/* Reports Tab */}
-      {activeTab === 'reports' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6 h-[500px]">
-              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
-                Campaign Conversion Rates (%)
-              </h3>
-              <ResponsiveContainer width="100%" height="80%">
-                <BarChart
-                  data={campaigns.map(c => {
-                    const cLeads = leads.filter(l => l.campaign === c.name);
-                    const qualified = cLeads.filter(l => l.status === 'qualified').length;
-                    return {
-                      name: c.name,
-                      rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
-                    };
-                  })}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value) => [`${value}%`, 'Conversion Rate']}
-                  />
-                  <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
-                    {campaigns.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            <Card className="p-6 h-[500px]">
-              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-indigo-600" />
-                Leads Volume by Campaign
-              </h3>
-              <ResponsiveContainer width="100%" height="80%">
-                <BarChart
-                  data={campaigns.map(c => ({
-                    name: c.name,
-                    total: leads.filter(l => l.campaign === c.name).length
-                  }))}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-          </div>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Detailed Performance Stats</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 text-left">
-                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Campaign</th>
-                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Total Leads</th>
-                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Qualified</th>
-                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Disqualified</th>
-                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Conversion %</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {campaigns.map(c => {
-                    const cLeads = leads.filter(l => l.campaign === c.name);
-                    const qCount = cLeads.filter(l => l.status === 'qualified').length;
-                    const dCount = cLeads.filter(l => l.status === 'disqualified').length;
-                    const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
-                    return (
-                      <tr key={c.id}>
-                        <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
-                        <td className="px-6 py-4 text-gray-600">{cLeads.length}</td>
-                        <td className="px-6 py-4 text-green-600 font-semibold">{qCount}</td>
-                        <td className="px-6 py-4 text-red-600">{dCount}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-gray-100 rounded-full h-2">
-                              <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${rate}%` }}></div>
-                            </div>
-                            <span className="text-sm font-bold">{rate}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Break Monitoring Tab */}
-      {
-        activeTab === 'breaks' && (
-          <Card className="overflow-hidden">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
-              <h3 className="text-xl font-bold text-gray-900">Real-time Break Monitoring</h3>
-              <p className="text-sm text-gray-600">Monitor all agents' current break status and total break time for today.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50/50 border-b border-gray-200">
-              <Card className="p-4 bg-white border-indigo-100 flex items-center gap-4">
-                <div className="p-3 bg-indigo-50 rounded-lg">
-                  <Users className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Agents</p>
-                  <p className="text-2xl font-bold text-indigo-900">{users.filter(u => u.role === 'employee').length}</p>
-                </div>
-              </Card>
-              <Card className="p-4 bg-white border-green-100 flex items-center gap-4">
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Today</p>
-                  <p className="text-2xl font-bold text-green-900">{allBreaks.length}</p>
-                </div>
-              </Card>
-              <Card className="p-4 bg-white border-purple-100 flex items-center gap-4">
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <Coffee className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">On Break Now</p>
-                  <p className="text-2xl font-bold text-purple-900">{allBreaks.filter(b => b.current_break_start).length}</p>
-                </div>
-              </Card>
-            </div>
-
-            <div className="p-6 bg-white border-b border-gray-200">
-              <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1">
-                  <Input
-                    label="Start Date"
-                    type="date"
-                    value={breakFilters.startDate}
-                    onChange={(e) => setBreakFilters({ ...breakFilters, startDate: e.target.value })}
-                  />
-                </div>
-                <div className="flex-1">
-                  <Input
-                    label="End Date"
-                    type="date"
-                    value={breakFilters.endDate}
-                    onChange={(e) => setBreakFilters({ ...breakFilters, endDate: e.target.value })}
-                  />
-                </div>
-                <Button
-                  onClick={downloadBreakReport}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center mb-0.5"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Report
-                </Button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Break Time</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">History</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {users.filter(u => u.role === 'employee').map(user => {
-                    const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
-                      total_break_seconds: 0,
-                      current_break_start: null,
-                      breaks: []
-                    };
-                    const isOnBreak = !!userBreakRecord.current_break_start;
-                    const totalSecs = userBreakRecord.total_break_seconds || 0;
-
-                    return (
-                      <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {isOnBreak ? (
-                            <div className="flex flex-col">
-                              <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 animate-pulse w-fit">
-                                On Break
-                              </span>
-                              <span className="text-[10px] text-purple-600 mt-1 font-mono">
-                                Start: {new Date(userBreakRecord.current_break_start).toLocaleTimeString()}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                              Available
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <span className="font-semibold">{formatTime(totalSecs)}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => { setSelectedUserForBreaks(user); setShowAdminBreakHistory(true); }}
-                            className="flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            View History
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {showAdminBreakHistory && selectedUserForBreaks && (
-              <AdminBreakHistoryModal
-                user={selectedUserForBreaks}
-                onClose={() => setShowAdminBreakHistory(false)}
-              />
-            )}
-          </Card>
-        )
-      }
-
-      {/* Campaigns Tab */}
-      {
-        activeTab === 'campaigns' && (
-          <>
-            <div className="flex justify-end">
-              <Button onClick={() => { setEditingCampaign(null); setShowCampaignModal(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Campaign
-              </Button>
-            </div>
-
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Campaign Name</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Description</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created By</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created Date</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Contact</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {campaigns.map(campaign => (
-                      <tr key={campaign.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{campaign.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{campaign.description}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{campaign.createdBy}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{campaign.createdAt}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => toggleCampaignStatus(campaign.id)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${campaign.isActive ? 'bg-green-500' : 'bg-gray-200'
-                              }`}
-                            title={campaign.isActive ? 'Deactivate' : 'Activate'}
-                          >
-                            <span
-                              className={`${campaign.isActive ? 'translate-x-6' : 'translate-x-1'
-                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                    {paginatedLeads.map(lead => {
+                      const isStale = new Date(lead.updated_at) < new Date(Date.now() - 48 * 60 * 60 * 1000);
+                      return (
+                        <tr key={lead.id} className={`hover:bg-gray-50 transition-colors ${isStale ? 'bg-red-50/50' : ''}`}>
+                          <td className="px-6 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedLeads.includes(lead.id)}
+                              onChange={() => handleSelectLead(lead.id)}
                             />
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => { setEditingCampaign(campaign); setShowCampaignModal(true); }}
-                              className="text-indigo-600 hover:text-indigo-700"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => toggleCampaignStatus(campaign.id)}
-                              className="text-yellow-600 hover:text-yellow-700"
-                              title={campaign.isActive ? 'Deactivate' : 'Activate'}
-                            >
-                              <RefreshCw className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => deleteCampaign(campaign.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </td>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {lead.first_name} {lead.last_name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
+                              lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                              {lead.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex items-center gap-3">
+                              {isStale && (
+                                <AlertTriangle
+                                  className="w-4 h-4 text-red-500 animate-pulse"
+                                  title="Lead hasn't been updated in >48 hours"
+                                />
+                              )}
+                              <button
+                                onClick={() => { setEditingLead(lead); setShowEditLeadModal(true); }}
+                                className="text-indigo-600 hover:text-indigo-700"
+                                title="Edit Lead"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+            {/* Edit Lead Modal */}
+            {
+              showEditLeadModal && (
+                <UploadLeadModal
+                  onClose={() => { setShowEditLeadModal(false); setEditingLead(null); }}
+                  onSuccess={() => { loadData(); setShowEditLeadModal(false); setEditingLead(null); }}
+                  employeeId={editingLead?.employee_id}
+                  employeeName={editingLead?.ra_name}
+                  leadToEdit={editingLead}
+                />
+              )
+            }
+            {/* Upload Modal */}
+            {
+              showUploadModal && (
+                <UploadLeadModal
+                  onClose={() => setShowUploadModal(false)}
+                  onSuccess={loadData}
+                  employeeId={'admin'}
+                  employeeName={'Admin'}
+                />
+              )
+            }
+            {/* Bulk Delete Confirmation Modal */}
+            {
+              showBulkDeleteLeadsConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+                  <Card className="w-full max-w-md p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Bulk Delete</h3>
+                    <p className="text-gray-600 mb-6">
+                      Are you sure you want to delete these {selectedLeads.length} leads? This action cannot be undone.
+                    </p>
+                    <div className="flex justify-end gap-3">
+                      <Button variant="secondary" onClick={() => setShowBulkDeleteLeadsConfirm(false)}>
+                        Cancel
+                      </Button>
+                      <Button variant="danger" onClick={confirmBulkDeleteLeads}>
+                        Delete Selected
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              )
+            }
+          </div >
+        )}
+
+        {/* Manage Users Tab */}
+        {
+          activeTab === 'users' && (
+            <>
+              <div className="flex justify-end gap-2">
+                {selectedUsers.length > 0 && (
+                  <Button variant="danger" onClick={() => setShowBulkDeleteConfirm(true)}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Selected ({selectedUsers.length})
+                  </Button>
+                )}
+                <Button onClick={() => { setEditingUser(null); setShowUserModal(true); }}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add User
+                </Button>
+              </div>
+
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+                      <tr>
+                        <th className="px-6 py-4">
+                          <input
+                            type="checkbox"
+                            onChange={handleSelectAllUsers}
+                            checked={users.some(u => u.role !== 'admin') && selectedUsers.length === users.filter(u => u.role !== 'admin').length}
+                            disabled={!users.some(u => u.role !== 'admin')}
+                          />
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Username</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Role</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                       </tr>
-                    ))}
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {users.map(user => (
+                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedUsers.includes(user.id)}
+                              onChange={() => handleSelectUser(user.id)}
+                              disabled={user.role === 'admin'}
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.username}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                              user.role === 'qa' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => { setEditingUser(user); setShowUserModal(true); }}
+                                className="text-indigo-600 hover:text-indigo-700"
+                                title="Edit User"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => resetPassword(user.id)}
+                                className="text-yellow-600 hover:text-yellow-700"
+                                title="Reset Password"
+                              >
+                                <RefreshCw className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => initiateDeleteUser(user)}
+                                className="text-red-600 hover:text-red-700"
+                                disabled={user.role === 'admin'}
+                                title="Delete User"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {showUserModal && (
+                <UserModal
+                  user={editingUser}
+                  onClose={() => setShowUserModal(false)}
+                  onSuccess={loadData}
+                />
+              )}
+
+              {showAdminBreakHistory && selectedUserForBreaks && (
+                <AdminBreakHistoryModal
+                  user={selectedUserForBreaks}
+                  onClose={() => setShowAdminBreakHistory(false)}
+                />
+              )}
+
+              <ConfirmationModal
+                isOpen={deleteConfirmation.isOpen}
+                onClose={() => setDeleteConfirmation({ isOpen: false, userId: null, userName: '' })}
+                onConfirm={confirmDeleteUser}
+                title="Delete User"
+                message={`Are you sure you want to delete user "${deleteConfirmation.userName}"? This action cannot be undone.`}
+              />
+
+              <ConfirmationModal
+                isOpen={showBulkDeleteConfirm}
+                onClose={() => setShowBulkDeleteConfirm(false)}
+                onConfirm={confirmBulkDeleteUsers}
+                title="Bulk Delete Users"
+                message={`Are you sure you want to delete ${selectedUsers.length} selected users? This action cannot be undone.`}
+              />
+
+              {showBulkEditModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+                  <Card className="w-full max-w-md p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-bold text-gray-900">Modify {selectedLeads.length} Leads</h3>
+                      <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                        <X className="w-6 h-6" />
+                      </button>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">New Status</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          value={bulkEditForm.status}
+                          onChange={(e) => setBulkEditForm({ ...bulkEditForm, status: e.target.value })}
+                        >
+                          <option value="">No Change</option>
+                          <option value="pending">Pending</option>
+                          <option value="qualified">Qualified</option>
+                          <option value="disqualified">Disqualified</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">New Campaign</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          value={bulkEditForm.campaign}
+                          onChange={(e) => setBulkEditForm({ ...bulkEditForm, campaign: e.target.value })}
+                        >
+                          <option value="">No Change</option>
+                          {campaigns.map(c => (
+                            <option key={c.id} value={c.name}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-8">
+                      <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>
+                        Cancel
+                      </Button>
+                      <Button variant="primary" onClick={handleBulkUpdateLeads}>
+                        Apply Changes
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              )}
+            </>
+          )
+        }
+
+        {/* Reports Tab */}
+        {activeTab === 'reports' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="p-6 h-[500px]">
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                  <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
+                  Campaign Conversion Rates (%)
+                </h3>
+                <ResponsiveContainer width="100%" height="80%">
+                  <BarChart
+                    data={campaigns.map(c => {
+                      const cLeads = leads.filter(l => l.campaign === c.name);
+                      const qualified = cLeads.filter(l => l.status === 'qualified').length;
+                      return {
+                        name: c.name,
+                        rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
+                      };
+                    })}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value) => [`${value}%`, 'Conversion Rate']}
+                    />
+                    <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
+                      {campaigns.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              <Card className="p-6 h-[500px]">
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                  <Users className="w-5 h-5 mr-2 text-indigo-600" />
+                  Leads Volume by Campaign
+                </h3>
+                <ResponsiveContainer width="100%" height="80%">
+                  <BarChart
+                    data={campaigns.map(c => ({
+                      name: c.name,
+                      total: leads.filter(l => l.campaign === c.name).length
+                    }))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            </div>
+
+            <Card className="p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Detailed Performance Stats</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Campaign</th>
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Total Leads</th>
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Qualified</th>
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Disqualified</th>
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Conversion %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {campaigns.map(c => {
+                      const cLeads = leads.filter(l => l.campaign === c.name);
+                      const qCount = cLeads.filter(l => l.status === 'qualified').length;
+                      const dCount = cLeads.filter(l => l.status === 'disqualified').length;
+                      const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
+                      return (
+                        <tr key={c.id}>
+                          <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
+                          <td className="px-6 py-4 text-gray-600">{cLeads.length}</td>
+                          <td className="px-6 py-4 text-green-600 font-semibold">{qCount}</td>
+                          <td className="px-6 py-4 text-red-600">{dCount}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 bg-gray-100 rounded-full h-2">
+                                <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${rate}%` }}></div>
+                              </div>
+                              <span className="text-sm font-bold">{rate}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </Card>
+          </div>
+        )}
 
-            {showCampaignModal && (
-              <CampaignModal
-                campaign={editingCampaign}
-                onClose={() => setShowCampaignModal(false)}
-                onSuccess={loadData}
-              />
-            )}
-          </>
-        )
-      }
-    </div >
-  );
-};
+        {/* Break Monitoring Tab */}
+        {
+          activeTab === 'breaks' && (
+            <Card className="overflow-hidden">
+              <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+                <h3 className="text-xl font-bold text-gray-900">Real-time Break Monitoring</h3>
+                <p className="text-sm text-gray-600">Monitor all agents' current break status and total break time for today.</p>
+              </div>
 
-// User Modal Component
-const UserModal = ({ user, onClose, onSuccess }) => {
-  const [formData, setFormData] = useState(
-    user ? { ...user } : { name: '', username: '', password: '', role: 'employee' }
-  );
-  const [showPassword, setShowPassword] = useState(false);
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50/50 border-b border-gray-200">
+                <Card className="p-4 bg-white border-indigo-100 flex items-center gap-4">
+                  <div className="p-3 bg-indigo-50 rounded-lg">
+                    <Users className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Agents</p>
+                    <p className="text-2xl font-bold text-indigo-900">{users.filter(u => u.role === 'employee').length}</p>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-white border-green-100 flex items-center gap-4">
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Today</p>
+                    <p className="text-2xl font-bold text-green-900">{allBreaks.length}</p>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-white border-purple-100 flex items-center gap-4">
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <Coffee className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">On Break Now</p>
+                    <p className="text-2xl font-bold text-purple-900">{allBreaks.filter(b => b.current_break_start).length}</p>
+                  </div>
+                </Card>
+              </div>
 
-  const { register, createUser } = useAuth();
+              <div className="p-6 bg-white border-b border-gray-200">
+                <div className="flex flex-col md:flex-row gap-4 items-end">
+                  <div className="flex-1">
+                    <Input
+                      label="Start Date"
+                      type="date"
+                      value={breakFilters.startDate}
+                      onChange={(e) => setBreakFilters({ ...breakFilters, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      label="End Date"
+                      type="date"
+                      value={breakFilters.endDate}
+                      onChange={(e) => setBreakFilters({ ...breakFilters, endDate: e.target.value })}
+                    />
+                  </div>
+                  <Button
+                    onClick={downloadBreakReport}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center mb-0.5"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Report
+                  </Button>
+                </div>
+              </div>
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent Name</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Break Time</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">History</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {users.filter(u => u.role === 'employee').map(user => {
+                      const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
+                        total_break_seconds: 0,
+                        current_break_start: null,
+                        breaks: []
+                      };
+                      const isOnBreak = !!userBreakRecord.current_break_start;
+                      const totalSecs = userBreakRecord.total_break_seconds || 0;
 
-    if (user) {
-      // Edit existing user profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: formData.name,
-          role: formData.role
-        })
-        .eq('id', user.id);
+                      return (
+                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isOnBreak ? (
+                              <div className="flex flex-col">
+                                <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 animate-pulse w-fit">
+                                  On Break
+                                </span>
+                                <span className="text-[10px] text-purple-600 mt-1 font-mono">
+                                  Start: {new Date(userBreakRecord.current_break_start).toLocaleTimeString()}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Available
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <span className="font-semibold">{formatTime(totalSecs)}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => { setSelectedUserForBreaks(user); setShowAdminBreakHistory(true); }}
+                              className="flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View History
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {showAdminBreakHistory && selectedUserForBreaks && (
+                <AdminBreakHistoryModal
+                  user={selectedUserForBreaks}
+                  onClose={() => setShowAdminBreakHistory(false)}
+                />
+              )}
+            </Card>
+          )
+        }
 
-      if (error) {
-        alert('Error updating profile: ' + error.message);
-        return;
-      }
-    } else {
-      // Add new user via Auth
-      // Enforce @ovmkr.site domain if not present
-      let finalEmail = formData.username.trim();
-      if (!finalEmail.includes('@')) {
-        finalEmail = `${finalEmail}@ovmkr.site`;
-      }
+        {/* Campaigns Tab */}
+        {
+          activeTab === 'campaigns' && (
+            <>
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditingCampaign(null); setShowCampaignModal(true); }}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Campaign
+                </Button>
+              </div>
 
-      // Use createUser to avoid changing the current session
-      const result = await createUser({
-        ...formData,
-        username: finalEmail
-      });
-      if (!result.success) {
-        alert('Error adding user: ' + result.error);
-        return;
-      }
-    }
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Campaign Name</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Description</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created By</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created Date</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {campaigns.map(campaign => (
+                        <tr key={campaign.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{campaign.name}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900">{campaign.description}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{campaign.createdBy}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{campaign.createdAt}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => toggleCampaignStatus(campaign.id)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${campaign.isActive ? 'bg-green-500' : 'bg-gray-200'
+                                }`}
+                              title={campaign.isActive ? 'Deactivate' : 'Activate'}
+                            >
+                              <span
+                                className={`${campaign.isActive ? 'translate-x-6' : 'translate-x-1'
+                                  } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                              />
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => { setEditingCampaign(campaign); setShowCampaignModal(true); }}
+                                className="text-indigo-600 hover:text-indigo-700"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => toggleCampaignStatus(campaign.id)}
+                                className="text-yellow-600 hover:text-yellow-700"
+                                title={campaign.isActive ? 'Deactivate' : 'Activate'}
+                              >
+                                <RefreshCw className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => deleteCampaign(campaign.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
 
-    onSuccess();
-    onClose();
+              {showCampaignModal && (
+                <CampaignModal
+                  campaign={editingCampaign}
+                  onClose={() => setShowCampaignModal(false)}
+                  onSuccess={loadData}
+                />
+              )}
+            </>
+          )
+        }
+      </div >
+    );
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <Card className="w-full max-w-md">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {user ? 'Edit User' : 'Add User'}
-            </h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X className="w-6 h-6" />
-            </button>
+  // User Modal Component
+  const UserModal = ({ user, onClose, onSuccess }) => {
+    const [formData, setFormData] = useState(
+      user ? { ...user } : { name: '', username: '', password: '', role: 'employee' }
+    );
+    const [showPassword, setShowPassword] = useState(false);
+
+    const { register, createUser } = useAuth();
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+
+      if (user) {
+        // Edit existing user profile
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: formData.name,
+            role: formData.role
+          })
+          .eq('id', user.id);
+
+        if (error) {
+          alert('Error updating profile: ' + error.message);
+          return;
+        }
+      } else {
+        // Add new user via Auth
+        // Enforce @ovmkr.site domain if not present
+        let finalEmail = formData.username.trim();
+        if (!finalEmail.includes('@')) {
+          finalEmail = `${finalEmail}@ovmkr.site`;
+        }
+
+        // Use createUser to avoid changing the current session
+        const result = await createUser({
+          ...formData,
+          username: finalEmail
+        });
+        if (!result.success) {
+          alert('Error adding user: ' + result.error);
+          return;
+        }
+      }
+
+      onSuccess();
+      onClose();
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {user ? 'Edit User' : 'Add User'}
+              </h2>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
-        </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          <Input
-            label="Full Name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
+          <form onSubmit={handleSubmit} className="p-6">
+            <Input
+              label="Full Name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
 
-          <Input
-            label="Email"
-            placeholder="username@ovmkr.site"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            required
-          />
+            <Input
+              label="Email"
+              placeholder="username@ovmkr.site"
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              required
+            />
 
-          {!user && (
+            {!user && (
+              <div className="relative">
+                <Input
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            )}
+
+            <Select
+              label="Role"
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              options={[
+                { value: 'employee', label: 'Employee' },
+                { value: 'qa', label: 'QA' },
+                { value: 'admin', label: 'Admin' }
+              ]}
+            />
+
+            <div className="flex justify-end gap-4 mt-6">
+              <Button variant="secondary" onClick={onClose} type="button">
+                Cancel
+              </Button>
+              <Button type="submit">
+                {user ? 'Update User' : 'Add User'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+    );
+  };
+
+  // Confirmation Modal Component
+  const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+          <div className="p-6">
+            <p className="text-gray-600 mb-6">{message}</p>
+            <div className="flex justify-end gap-4">
+              <Button variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="danger" onClick={onConfirm}>Delete</Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
+  // Campaign Modal Component
+  const CampaignModal = ({ campaign, onClose, onSuccess }) => {
+    const { currentUser } = useAuth();
+    const [formData, setFormData] = useState(
+      campaign ? { ...campaign } : { name: '', description: '', isActive: true, customQuestions: [] }
+    );
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+
+      if (campaign) {
+        // Edit existing campaign
+        const { error } = await supabase
+          .from('campaigns')
+          .update({
+            name: formData.name,
+            description: formData.description,
+            is_active: formData.isActive,
+            custom_questions: formData.customQuestions
+          })
+          .eq('id', campaign.id);
+
+        if (error) {
+          alert('Error updating campaign: ' + error.message);
+          return;
+        }
+      } else {
+        // Add new campaign
+        const { error } = await supabase
+          .from('campaigns')
+          .insert({
+            name: formData.name,
+            description: formData.description,
+            is_active: formData.isActive,
+            custom_questions: formData.customQuestions,
+            created_by: currentUser.name
+          });
+
+        if (error) {
+          alert('Error creating campaign: ' + error.message);
+          return;
+        }
+      }
+
+      onSuccess();
+      onClose();
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {campaign ? 'Edit Campaign' : 'Create Campaign'}
+              </h2>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6">
+            <Input
+              label="Campaign Name *"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              placeholder="Enter campaign name"
+            />
+
+
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Custom Questions ({formData.customQuestions?.length || 0}/10)
+                </label>
+                {(formData.customQuestions?.length || 0) < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestions = [...(formData.customQuestions || [])];
+                      newQuestions.push({ id: Date.now(), question: '', order: newQuestions.length + 1 });
+                      setFormData({ ...formData, customQuestions: newQuestions });
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    + Add Question
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                {formData.customQuestions?.map((q, index) => (
+                  <div key={q.id} className="flex gap-2">
+                    <Input
+                      value={q.question}
+                      onChange={(e) => {
+                        const newQuestions = [...formData.customQuestions];
+                        newQuestions[index].question = e.target.value;
+                        setFormData({ ...formData, customQuestions: newQuestions });
+                      }}
+                      placeholder={`Question ${index + 1}`}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newQuestions = formData.customQuestions.filter((_, i) => i !== index);
+                        setFormData({ ...formData, customQuestions: newQuestions });
+                      }}
+                      className="text-red-500 hover:text-red-700 p-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {(!formData.customQuestions || formData.customQuestions.length === 0) && (
+                  <p className="text-sm text-gray-500 italic">No custom questions added.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <span className="ml-2 text-sm font-semibold text-gray-700">Active Campaign</span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-4 mt-6">
+              <Button variant="secondary" onClick={onClose} type="button">
+                Cancel
+              </Button>
+              <Button type="submit">
+                {campaign ? 'Update Campaign' : 'Create Campaign'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div >
+    );
+  };
+
+  // Change Password Modal Component
+  const ChangePasswordModal = ({ user, onClose }) => {
+    const [formData, setFormData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [error, setError] = useState('');
+    const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setError('');
+
+      if (formData.newPassword !== formData.confirmPassword) {
+        setError("New passwords don't match");
+        return;
+      }
+
+      if (formData.newPassword.length < 6) {
+        setError("Password must be at least 6 characters (Supabase requirement)");
+        return;
+      }
+
+      // Supabase updateUser only updates the current user's password
+      const { error } = await supabase.auth.updateUser({
+        password: formData.newPassword
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        alert('Password changed successfully');
+        onClose();
+      }
+    };
+
+    const toggleShow = (field) => {
+      setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Change Password</h2>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6">
             <div className="relative">
               <Input
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                label="Current Password"
+                type={showPasswords.current ? "text" : "password"}
+                value={formData.currentPassword}
+                onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
                 required
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => toggleShow('current')}
                 className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-          )}
 
-          <Select
-            label="Role"
-            value={formData.role}
-            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-            options={[
-              { value: 'employee', label: 'Employee' },
-              { value: 'qa', label: 'QA' },
-              { value: 'admin', label: 'Admin' }
-            ]}
-          />
-
-          <div className="flex justify-end gap-4 mt-6">
-            <Button variant="secondary" onClick={onClose} type="button">
-              Cancel
-            </Button>
-            <Button type="submit">
-              {user ? 'Update User' : 'Add User'}
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </div>
-  );
-};
-
-// Confirmation Modal Component
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <Card className="w-full max-w-md">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-        <div className="p-6">
-          <p className="text-gray-600 mb-6">{message}</p>
-          <div className="flex justify-end gap-4">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="danger" onClick={onConfirm}>Delete</Button>
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-};
-
-// Campaign Modal Component
-const CampaignModal = ({ campaign, onClose, onSuccess }) => {
-  const { currentUser } = useAuth();
-  const [formData, setFormData] = useState(
-    campaign ? { ...campaign } : { name: '', description: '', isActive: true, customQuestions: [] }
-  );
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (campaign) {
-      // Edit existing campaign
-      const { error } = await supabase
-        .from('campaigns')
-        .update({
-          name: formData.name,
-          description: formData.description,
-          is_active: formData.isActive,
-          custom_questions: formData.customQuestions
-        })
-        .eq('id', campaign.id);
-
-      if (error) {
-        alert('Error updating campaign: ' + error.message);
-        return;
-      }
-    } else {
-      // Add new campaign
-      const { error } = await supabase
-        .from('campaigns')
-        .insert({
-          name: formData.name,
-          description: formData.description,
-          is_active: formData.isActive,
-          custom_questions: formData.customQuestions,
-          created_by: currentUser.name
-        });
-
-      if (error) {
-        alert('Error creating campaign: ' + error.message);
-        return;
-      }
-    }
-
-    onSuccess();
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <Card className="w-full max-w-md">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {campaign ? 'Edit Campaign' : 'Create Campaign'}
-            </h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          <Input
-            label="Campaign Name *"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-            placeholder="Enter campaign name"
-          />
-
-
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-semibold text-gray-700">
-                Custom Questions ({formData.customQuestions?.length || 0}/10)
-              </label>
-              {(formData.customQuestions?.length || 0) < 10 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newQuestions = [...(formData.customQuestions || [])];
-                    newQuestions.push({ id: Date.now(), question: '', order: newQuestions.length + 1 });
-                    setFormData({ ...formData, customQuestions: newQuestions });
-                  }}
-                  className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                >
-                  + Add Question
-                </button>
-              )}
-            </div>
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-              {formData.customQuestions?.map((q, index) => (
-                <div key={q.id} className="flex gap-2">
-                  <Input
-                    value={q.question}
-                    onChange={(e) => {
-                      const newQuestions = [...formData.customQuestions];
-                      newQuestions[index].question = e.target.value;
-                      setFormData({ ...formData, customQuestions: newQuestions });
-                    }}
-                    placeholder={`Question ${index + 1}`}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newQuestions = formData.customQuestions.filter((_, i) => i !== index);
-                      setFormData({ ...formData, customQuestions: newQuestions });
-                    }}
-                    className="text-red-500 hover:text-red-700 p-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-              {(!formData.customQuestions || formData.customQuestions.length === 0) && (
-                <p className="text-sm text-gray-500 italic">No custom questions added.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            <div className="relative">
+              <Input
+                label="New Password"
+                type={showPasswords.new ? "text" : "password"}
+                value={formData.newPassword}
+                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                required
               />
-              <span className="ml-2 text-sm font-semibold text-gray-700">Active Campaign</span>
-            </label>
-          </div>
-
-          <div className="flex justify-end gap-4 mt-6">
-            <Button variant="secondary" onClick={onClose} type="button">
-              Cancel
-            </Button>
-            <Button type="submit">
-              {campaign ? 'Update Campaign' : 'Create Campaign'}
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </div >
-  );
-};
-
-// Change Password Modal Component
-const ChangePasswordModal = ({ user, onClose }) => {
-  const [formData, setFormData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [error, setError] = useState('');
-  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError("New passwords don't match");
-      return;
-    }
-
-    if (formData.newPassword.length < 6) {
-      setError("Password must be at least 6 characters (Supabase requirement)");
-      return;
-    }
-
-    // Supabase updateUser only updates the current user's password
-    const { error } = await supabase.auth.updateUser({
-      password: formData.newPassword
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      alert('Password changed successfully');
-      onClose();
-    }
-  };
-
-  const toggleShow = (field) => {
-    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <Card className="w-full max-w-md">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">Change Password</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="relative">
-            <Input
-              label="Current Password"
-              type={showPasswords.current ? "text" : "password"}
-              value={formData.currentPassword}
-              onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => toggleShow('current')}
-              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
-            >
-              {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-
-          <div className="relative">
-            <Input
-              label="New Password"
-              type={showPasswords.new ? "text" : "password"}
-              value={formData.newPassword}
-              onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => toggleShow('new')}
-              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
-            >
-              {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-
-          <div className="relative">
-            <Input
-              label="Confirm New Password"
-              type={showPasswords.confirm ? "text" : "password"}
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => toggleShow('confirm')}
-              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
-            >
-              {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-
-          <div className="flex justify-end gap-4 mt-6">
-            <Button variant="secondary" onClick={onClose} type="button">
-              Cancel
-            </Button>
-            <Button type="submit">
-              Change Password
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </div>
-  );
-};
-
-// Main Layout
-const MainLayout = () => {
-  const { currentUser, logout } = useAuth();
-  const [showChangePassword, setShowChangePassword] = useState(false);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BarChart3 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  Lead Manager Pro
-                </h1>
-                <p className="text-xs text-gray-600">{currentUser.role.toUpperCase()} Dashboard</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">{currentUser.name}</p>
-                <p className="text-xs text-gray-600">{currentUser.username}</p>
-              </div>
-              <Button variant="secondary" onClick={() => setShowChangePassword(true)} title="Change Password" className="px-3">
-                <Key className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={logout}
-                className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 flex items-center gap-2 font-semibold transition-all hover:shadow-sm"
+              <button
+                type="button"
+                onClick={() => toggleShow('new')}
+                className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
+                {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                label="Confirm New Password"
+                type={showPasswords.confirm ? "text" : "password"}
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => toggleShow('confirm')}
+                className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
+              >
+                {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+
+            <div className="flex justify-end gap-4 mt-6">
+              <Button variant="secondary" onClick={onClose} type="button">
+                Cancel
+              </Button>
+              <Button type="submit">
+                Change Password
               </Button>
             </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {currentUser.role === 'employee' && <EmployeeDashboard />}
-        {currentUser.role === 'qa' && <QADashboard />}
-        {currentUser.role === 'admin' && <AdminDashboard />}
-      </main>
-
-      {showChangePassword && (
-        <ChangePasswordModal
-          user={currentUser}
-          onClose={() => setShowChangePassword(false)}
-        />
-      )}
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-600">
-          © Outvying 2026 Lead Manager Pro. All rights reserved.
-        </div>
-      </footer>
-    </div>
-  );
-};
-
-// Main App Component
-const App = () => {
-  const { currentUser, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Check if Supabase initialized correctly
-  const url = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-  const key = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-  const isSupabaseReady = url && url.startsWith('https://');
-  const isKeyValid = key && (key.startsWith('eyJ') || key.startsWith('sb_publishable_') || key.length > 40);
-
-  if (!isSupabaseReady || !isKeyValid) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
-        <Card className="max-w-md p-8 border-red-200">
-          <h2 className="text-xl font-bold text-red-700 mb-4">Configuration Error</h2>
-          <p className="text-gray-700 mb-4">
-            {!isSupabaseReady
-              ? 'The Supabase URL is missing or invalid.'
-              : 'The Supabase Anon Key looks incorrect.'}
-          </p>
-          <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4 overflow-auto max-h-40">
-            Detected URL: {url ? (url.substring(0, 15) + '...') : 'MISSING'}<br />
-            Detected Key: {key ? (key.substring(0, 5) + '...') : 'MISSING'}<br />
-            <br />
-            Available REACT_APP_ keys:<br />
-            {Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')).join(', ') || 'NONE'}
-          </div>
-          <p className="text-sm text-gray-500">
-            Ensure you added variables to Vercel and then <strong>Redeployed</strong>.
-          </p>
+          </form>
         </Card>
       </div>
     );
+  };
+
+  // Main Layout
+  const MainLayout = () => {
+    const { currentUser, logout } = useAuth();
+    const [showChangePassword, setShowChangePassword] = useState(false);
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Header */}
+        <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    Lead Manager Pro
+                  </h1>
+                  <p className="text-xs text-gray-600">{currentUser.role.toUpperCase()} Dashboard</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-gray-900">{currentUser.name}</p>
+                  <p className="text-xs text-gray-600">{currentUser.username}</p>
+                </div>
+                <Button variant="secondary" onClick={() => setShowChangePassword(true)} title="Change Password" className="px-3">
+                  <Key className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={logout}
+                  className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 flex items-center gap-2 font-semibold transition-all hover:shadow-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          {currentUser.role === 'employee' && <EmployeeDashboard />}
+          {currentUser.role === 'qa' && <QADashboard />}
+          {currentUser.role === 'admin' && <AdminDashboard />}
+        </main>
+
+        {showChangePassword && (
+          <ChangePasswordModal
+            user={currentUser}
+            onClose={() => setShowChangePassword(false)}
+          />
+        )}
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 mt-12">
+          <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-600">
+            © Outvying 2026 Lead Manager Pro. All rights reserved.
+          </div>
+        </footer>
+      </div>
+    );
+  };
+
+  // Main App Component
+  const App = () => {
+    const { currentUser, isLoading } = useAuth();
+
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Check if Supabase initialized correctly
+    const url = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+    const key = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+    const isSupabaseReady = url && url.startsWith('https://');
+    const isKeyValid = key && (key.startsWith('eyJ') || key.startsWith('sb_publishable_') || key.length > 40);
+
+    if (!isSupabaseReady || !isKeyValid) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
+          <Card className="max-w-md p-8 border-red-200">
+            <h2 className="text-xl font-bold text-red-700 mb-4">Configuration Error</h2>
+            <p className="text-gray-700 mb-4">
+              {!isSupabaseReady
+                ? 'The Supabase URL is missing or invalid.'
+                : 'The Supabase Anon Key looks incorrect.'}
+            </p>
+            <div className="bg-gray-100 p-3 rounded font-mono text-xs mb-4 overflow-auto max-h-40">
+              Detected URL: {url ? (url.substring(0, 15) + '...') : 'MISSING'}<br />
+              Detected Key: {key ? (key.substring(0, 5) + '...') : 'MISSING'}<br />
+              <br />
+              Available REACT_APP_ keys:<br />
+              {Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')).join(', ') || 'NONE'}
+            </div>
+            <p className="text-sm text-gray-500">
+              Ensure you added variables to Vercel and then <strong>Redeployed</strong>.
+            </p>
+          </Card>
+        </div>
+      );
+    }
+
+    return currentUser ? <MainLayout /> : <LoginPage />;
+  };
+
+  // Export with Provider
+  export default function LeadManagementApp() {
+    return (
+      <ErrorBoundary>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ErrorBoundary>
+    );
   }
 
-  return currentUser ? <MainLayout /> : <LoginPage />;
-};
-
-// Export with Provider
-export default function LeadManagementApp() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-}
-
-// CSS for animations
-const style = document.createElement('style');
-style.textContent = `
+  // CSS for animations
+  const style = document.createElement('style');
+  style.textContent = `
   @keyframes blob {
     0%, 100% { transform: translate(0, 0) scale(1); }
     33% { transform: translate(30px, -50px) scale(1.1); }
@@ -4256,4 +4253,13 @@ style.textContent = `
     animation-delay: 4s;
   }
 `;
-document.head.appendChild(style);
+  document.head.appendChild(style);
+
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+
+export default App;
