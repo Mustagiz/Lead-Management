@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Upload, Download, Users, BarChart3, Shield, LogOut, Filter, Check, X, Edit, Trash2, RefreshCw, Clock, CheckCircle, XCircle, Search, Plus, Eye, EyeOff, ChevronDown, Coffee, Key } from 'lucide-react';
+import { Upload, Download, Users, BarChart3, Shield, LogOut, Filter, Check, X, Edit, Trash2, RefreshCw, Clock, CheckCircle, XCircle, Search, Plus, Eye, EyeOff, ChevronDown, Coffee, Key, AlertTriangle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from './supabaseClient';
 
 // Context for Authentication
@@ -1011,6 +1012,20 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     }
 
     const submitData = async () => {
+      // Duplicate check (only for new leads or if email changed)
+      if (!leadToEdit || leadToEdit.email !== formData.email) {
+        const { data: existingLeads } = await supabase
+          .from('leads')
+          .select('id, company_name')
+          .eq('email', formData.email);
+
+        if (existingLeads && existingLeads.length > 0) {
+          if (!window.confirm(`A lead with this email already exists in "${existingLeads[0].company_name}". Do you want to proceed and create a duplicate?`)) {
+            return;
+          }
+        }
+      }
+
       if (leadToEdit) {
         // Update existing lead
         const { error } = await supabase
@@ -1252,11 +1267,51 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }
 
         if (newLeads.length > 0) {
-          const { error } = await supabase.from('leads').insert(newLeads);
-          if (error) {
-            console.error('Insert error:', error);
-            alert('Error importing leads: ' + error.message);
-            return;
+          // Batch Duplicate Check
+          const emailsToCheck = newLeads.map(l => l.email).filter(Boolean);
+          if (emailsToCheck.length > 0) {
+            const { data: existingLeads } = await supabase
+              .from('leads')
+              .select('email, company_name')
+              .in('email', emailsToCheck);
+
+            if (existingLeads && existingLeads.length > 0) {
+              const duplicateCount = existingLeads.length;
+              const duplicateEmails = existingLeads.map(l => l.email).join(', ');
+              if (!window.confirm(`${duplicateCount} leads already exist in the database with these emails: ${duplicateEmails.substring(0, 100)}${duplicateEmails.length > 100 ? '...' : ''}. \n\nDo you want to proceed and skip these duplicates?`)) {
+                return;
+              }
+              // Filter out duplicates if user confirmed to skip them
+              const finalLeads = newLeads.filter(nl => !existingLeads.find(el => el.email === nl.email));
+
+              if (finalLeads.length === 0) {
+                alert('All leads in the CSV are already present. No new leads were imported.');
+                onClose();
+                return;
+              }
+
+              const { error } = await supabase.from('leads').insert(finalLeads);
+              if (error) {
+                console.error('Insert error:', error);
+                alert('Error importing leads: ' + error.message);
+                return;
+              }
+              importedCount = finalLeads.length;
+            } else {
+              const { error } = await supabase.from('leads').insert(newLeads);
+              if (error) {
+                console.error('Insert error:', error);
+                alert('Error importing leads: ' + error.message);
+                return;
+              }
+            }
+          } else {
+            const { error } = await supabase.from('leads').insert(newLeads);
+            if (error) {
+              console.error('Insert error:', error);
+              alert('Error importing leads: ' + error.message);
+              return;
+            }
           }
         }
 
@@ -2116,7 +2171,13 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', agent: '', campaign: '' });
+  const [filters, setFilters] = useState({
+    startDate: '',
+    endDate: '',
+    agent: '',
+    campaign: '',
+    onlyStale: false
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const LEADS_PER_PAGE = 10;
   const [users, setUsers] = useState([]);
@@ -2360,6 +2421,10 @@ const AdminDashboard = () => {
     if (filters.campaign) {
       filtered = filtered.filter(lead => (lead.campaign || '').toLowerCase().includes(filters.campaign.toLowerCase()));
     }
+    if (filters.onlyStale) {
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      filtered = filtered.filter(lead => new Date(lead.updated_at) < fortyEightHoursAgo);
+    }
 
     setFilteredLeads(filtered);
     setCurrentPage(1);
@@ -2560,6 +2625,13 @@ const AdminDashboard = () => {
             <Coffee className="w-4 h-4 mr-2" />
             Break Monitoring
           </Button>
+          <Button
+            variant={activeTab === 'reports' ? 'primary' : 'secondary'}
+            onClick={() => setActiveTab('reports')}
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Performance Reports
+          </Button>
         </div>
       </Card>
 
@@ -2697,6 +2769,17 @@ const AdminDashboard = () => {
                   Apply
                 </Button>
                 <Button
+                  variant={filters.onlyStale ? 'primary' : 'secondary'}
+                  onClick={() => {
+                    const nextStale = !filters.onlyStale;
+                    setFilters({ ...filters, onlyStale: nextStale });
+                  }}
+                  title="Stale Leads (>48h)"
+                  className={filters.onlyStale ? 'bg-red-50 text-red-600 border-red-200' : ''}
+                >
+                  <AlertTriangle className={`w-4 h-4 ${filters.onlyStale ? 'animate-pulse' : ''}`} />
+                </Button>
+                <Button
                   variant="secondary"
                   onClick={handleClearFilters}
                   title="Clear Filters"
@@ -2755,41 +2838,52 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {paginatedLeads.map(lead => (
-                    <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedLeads.includes(lead.id)}
-                          onChange={() => handleSelectLead(lead.id)}
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {lead.first_name} {lead.last_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                          lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                          {lead.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => { setEditingLead(lead); setShowEditLeadModal(true); }}
-                          className="text-indigo-600 hover:text-indigo-700"
-                          title="Edit Lead"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {paginatedLeads.map(lead => {
+                    const isStale = new Date(lead.updated_at) < new Date(Date.now() - 48 * 60 * 60 * 1000);
+                    return (
+                      <tr key={lead.id} className={`hover:bg-gray-50 transition-colors ${isStale ? 'bg-red-50/50' : ''}`}>
+                        <td className="px-6 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedLeads.includes(lead.id)}
+                            onChange={() => handleSelectLead(lead.id)}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {lead.first_name} {lead.last_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
+                            lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                            {lead.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-3">
+                            {isStale && (
+                              <AlertTriangle
+                                className="w-4 h-4 text-red-500 animate-pulse"
+                                title="Lead hasn't been updated in >48 hours"
+                              />
+                            )}
+                            <button
+                              onClick={() => { setEditingLead(lead); setShowEditLeadModal(true); }}
+                              className="text-indigo-600 hover:text-indigo-700"
+                              title="Edit Lead"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2820,348 +2914,460 @@ const AdminDashboard = () => {
             )}
           </Card>
           {/* Edit Lead Modal */}
-          {showEditLeadModal && (
-            <UploadLeadModal
-              onClose={() => { setShowEditLeadModal(false); setEditingLead(null); }}
-              onSuccess={() => { loadData(); setShowEditLeadModal(false); setEditingLead(null); }}
-              employeeId={editingLead?.employee_id}
-              employeeName={editingLead?.ra_name}
-              leadToEdit={editingLead}
-            />
-          )}
+          {
+            showEditLeadModal && (
+              <UploadLeadModal
+                onClose={() => { setShowEditLeadModal(false); setEditingLead(null); }}
+                onSuccess={() => { loadData(); setShowEditLeadModal(false); setEditingLead(null); }}
+                employeeId={editingLead?.employee_id}
+                employeeName={editingLead?.ra_name}
+                leadToEdit={editingLead}
+              />
+            )
+          }
           {/* Upload Modal */}
-          {showUploadModal && (
-            <UploadLeadModal
-              onClose={() => setShowUploadModal(false)}
-              onSuccess={loadData}
-              employeeId={'admin'}
-              employeeName={'Admin'}
-            />
-          )}
+          {
+            showUploadModal && (
+              <UploadLeadModal
+                onClose={() => setShowUploadModal(false)}
+                onSuccess={loadData}
+                employeeId={'admin'}
+                employeeName={'Admin'}
+              />
+            )
+          }
           {/* Bulk Delete Confirmation Modal */}
-          {showBulkDeleteLeadsConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-              <Card className="w-full max-w-md p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Bulk Delete</h3>
-                <p className="text-gray-600 mb-6">
-                  Are you sure you want to delete these {selectedLeads.length} leads? This action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-3">
-                  <Button variant="secondary" onClick={() => setShowBulkDeleteLeadsConfirm(false)}>
-                    Cancel
-                  </Button>
-                  <Button variant="danger" onClick={confirmBulkDeleteLeads}>
-                    Delete Selected
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          )}
-        </div>
+          {
+            showBulkDeleteLeadsConfirm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+                <Card className="w-full max-w-md p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Bulk Delete</h3>
+                  <p className="text-gray-600 mb-6">
+                    Are you sure you want to delete these {selectedLeads.length} leads? This action cannot be undone.
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <Button variant="secondary" onClick={() => setShowBulkDeleteLeadsConfirm(false)}>
+                      Cancel
+                    </Button>
+                    <Button variant="danger" onClick={confirmBulkDeleteLeads}>
+                      Delete Selected
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            )
+          }
+        </div >
       )}
 
       {/* Manage Users Tab */}
-      {activeTab === 'users' && (
-        <>
-          <div className="flex justify-end gap-2">
-            {selectedUsers.length > 0 && (
-              <Button variant="danger" onClick={() => setShowBulkDeleteConfirm(true)}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Selected ({selectedUsers.length})
+      {
+        activeTab === 'users' && (
+          <>
+            <div className="flex justify-end gap-2">
+              {selectedUsers.length > 0 && (
+                <Button variant="danger" onClick={() => setShowBulkDeleteConfirm(true)}>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Selected ({selectedUsers.length})
+                </Button>
+              )}
+              <Button onClick={() => { setEditingUser(null); setShowUserModal(true); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add User
               </Button>
+            </div>
+
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+                    <tr>
+                      <th className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          onChange={handleSelectAllUsers}
+                          checked={users.some(u => u.role !== 'admin') && selectedUsers.length === users.filter(u => u.role !== 'admin').length}
+                          disabled={!users.some(u => u.role !== 'admin')}
+                        />
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Username</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Role</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {users.map(user => (
+                      <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.includes(user.id)}
+                            onChange={() => handleSelectUser(user.id)}
+                            disabled={user.role === 'admin'}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.username}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'qa' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => { setEditingUser(user); setShowUserModal(true); }}
+                              className="text-indigo-600 hover:text-indigo-700"
+                              title="Edit User"
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => resetPassword(user.id)}
+                              className="text-yellow-600 hover:text-yellow-700"
+                              title="Reset Password"
+                            >
+                              <RefreshCw className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => initiateDeleteUser(user)}
+                              className="text-red-600 hover:text-red-700"
+                              disabled={user.role === 'admin'}
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {showUserModal && (
+              <UserModal
+                user={editingUser}
+                onClose={() => setShowUserModal(false)}
+                onSuccess={loadData}
+              />
             )}
-            <Button onClick={() => { setEditingUser(null); setShowUserModal(true); }}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
+
+            {showAdminBreakHistory && selectedUserForBreaks && (
+              <AdminBreakHistoryModal
+                user={selectedUserForBreaks}
+                onClose={() => setShowAdminBreakHistory(false)}
+              />
+            )}
+
+            <ConfirmationModal
+              isOpen={deleteConfirmation.isOpen}
+              onClose={() => setDeleteConfirmation({ isOpen: false, userId: null, userName: '' })}
+              onConfirm={confirmDeleteUser}
+              title="Delete User"
+              message={`Are you sure you want to delete user "${deleteConfirmation.userName}"? This action cannot be undone.`}
+            />
+
+            <ConfirmationModal
+              isOpen={showBulkDeleteConfirm}
+              onClose={() => setShowBulkDeleteConfirm(false)}
+              onConfirm={confirmBulkDeleteUsers}
+              title="Bulk Delete Users"
+              message={`Are you sure you want to delete ${selectedUsers.length} selected users? This action cannot be undone.`}
+            />
+
+            {showBulkEditModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+                <Card className="w-full max-w-md p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-gray-900">Modify {selectedLeads.length} Leads</h3>
+                    <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">New Status</label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        value={bulkEditForm.status}
+                        onChange={(e) => setBulkEditForm({ ...bulkEditForm, status: e.target.value })}
+                      >
+                        <option value="">No Change</option>
+                        <option value="pending">Pending</option>
+                        <option value="qualified">Qualified</option>
+                        <option value="disqualified">Disqualified</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">New Campaign</label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        value={bulkEditForm.campaign}
+                        onChange={(e) => setBulkEditForm({ ...bulkEditForm, campaign: e.target.value })}
+                      >
+                        <option value="">No Change</option>
+                        {campaigns.map(c => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 mt-8">
+                    <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" onClick={handleBulkUpdateLeads}>
+                      Apply Changes
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </>
+        )
+      }
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="p-6 h-[500px]">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
+                Campaign Conversion Rates (%)
+              </h3>
+              <ResponsiveContainer width="100%" height="80%">
+                <BarChart
+                  data={campaigns.map(c => {
+                    const cLeads = leads.filter(l => l.campaign === c.name);
+                    const qualified = cLeads.filter(l => l.status === 'qualified').length;
+                    return {
+                      name: c.name,
+                      rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
+                    };
+                  })}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
+                  <YAxis />
+                  <Tooltip
+                    formatter={(value) => [`${value}%`, 'Conversion Rate']}
+                  />
+                  <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
+                    {campaigns.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            <Card className="p-6 h-[500px]">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-indigo-600" />
+                Leads Volume by Campaign
+              </h3>
+              <ResponsiveContainer width="100%" height="80%">
+                <BarChart
+                  data={campaigns.map(c => ({
+                    name: c.name,
+                    total: leads.filter(l => l.campaign === c.name).length
+                  }))}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
           </div>
 
-          <Card className="overflow-hidden">
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Detailed Performance Stats</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                  <tr>
-                    <th className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        onChange={handleSelectAllUsers}
-                        checked={users.some(u => u.role !== 'admin') && selectedUsers.length === users.filter(u => u.role !== 'admin').length}
-                        disabled={!users.some(u => u.role !== 'admin')}
-                      />
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Username</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Campaign</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Total Leads</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Qualified</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Disqualified</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Conversion %</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {users.map(user => (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={() => handleSelectUser(user.id)}
-                          disabled={user.role === 'admin'}
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.username}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                          user.role === 'qa' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => { setEditingUser(user); setShowUserModal(true); }}
-                            className="text-indigo-600 hover:text-indigo-700"
-                            title="Edit User"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => resetPassword(user.id)}
-                            className="text-yellow-600 hover:text-yellow-700"
-                            title="Reset Password"
-                          >
-                            <RefreshCw className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => initiateDeleteUser(user)}
-                            className="text-red-600 hover:text-red-700"
-                            disabled={user.role === 'admin'}
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {campaigns.map(c => {
+                    const cLeads = leads.filter(l => l.campaign === c.name);
+                    const qCount = cLeads.filter(l => l.status === 'qualified').length;
+                    const dCount = cLeads.filter(l => l.status === 'disqualified').length;
+                    const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
+                    return (
+                      <tr key={c.id}>
+                        <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
+                        <td className="px-6 py-4 text-gray-600">{cLeads.length}</td>
+                        <td className="px-6 py-4 text-green-600 font-semibold">{qCount}</td>
+                        <td className="px-6 py-4 text-red-600">{dCount}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-gray-100 rounded-full h-2">
+                              <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${rate}%` }}></div>
+                            </div>
+                            <span className="text-sm font-bold">{rate}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </Card>
-
-          {showUserModal && (
-            <UserModal
-              user={editingUser}
-              onClose={() => setShowUserModal(false)}
-              onSuccess={loadData}
-            />
-          )}
-
-          {showAdminBreakHistory && selectedUserForBreaks && (
-            <AdminBreakHistoryModal
-              user={selectedUserForBreaks}
-              onClose={() => setShowAdminBreakHistory(false)}
-            />
-          )}
-
-          <ConfirmationModal
-            isOpen={deleteConfirmation.isOpen}
-            onClose={() => setDeleteConfirmation({ isOpen: false, userId: null, userName: '' })}
-            onConfirm={confirmDeleteUser}
-            title="Delete User"
-            message={`Are you sure you want to delete user "${deleteConfirmation.userName}"? This action cannot be undone.`}
-          />
-
-          <ConfirmationModal
-            isOpen={showBulkDeleteConfirm}
-            onClose={() => setShowBulkDeleteConfirm(false)}
-            onConfirm={confirmBulkDeleteUsers}
-            title="Bulk Delete Users"
-            message={`Are you sure you want to delete ${selectedUsers.length} selected users? This action cannot be undone.`}
-          />
-
-          {showBulkEditModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-              <Card className="w-full max-w-md p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900">Modify {selectedLeads.length} Leads</h3>
-                  <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">New Status</label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      value={bulkEditForm.status}
-                      onChange={(e) => setBulkEditForm({ ...bulkEditForm, status: e.target.value })}
-                    >
-                      <option value="">No Change</option>
-                      <option value="pending">Pending</option>
-                      <option value="qualified">Qualified</option>
-                      <option value="disqualified">Disqualified</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">New Campaign</label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      value={bulkEditForm.campaign}
-                      onChange={(e) => setBulkEditForm({ ...bulkEditForm, campaign: e.target.value })}
-                    >
-                      <option value="">No Change</option>
-                      {campaigns.map(c => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3 mt-8">
-                  <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>
-                    Cancel
-                  </Button>
-                  <Button variant="primary" onClick={handleBulkUpdateLeads}>
-                    Apply Changes
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          )}
-        </>
+        </div>
       )}
 
       {/* Break Monitoring Tab */}
-      {activeTab === 'breaks' && (
-        <Card className="overflow-hidden">
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
-            <h3 className="text-xl font-bold text-gray-900">Real-time Break Monitoring</h3>
-            <p className="text-sm text-gray-600">Monitor all agents' current break status and total break time for today.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50/50 border-b border-gray-200">
-            <Card className="p-4 bg-white border-indigo-100 flex items-center gap-4">
-              <div className="p-3 bg-indigo-50 rounded-lg">
-                <Users className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Agents</p>
-                <p className="text-2xl font-bold text-indigo-900">{users.filter(u => u.role === 'employee').length}</p>
-              </div>
-            </Card>
-            <Card className="p-4 bg-white border-green-100 flex items-center gap-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Today</p>
-                <p className="text-2xl font-bold text-green-900">{allBreaks.length}</p>
-              </div>
-            </Card>
-            <Card className="p-4 bg-white border-purple-100 flex items-center gap-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <Coffee className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">On Break Now</p>
-                <p className="text-2xl font-bold text-purple-900">{allBreaks.filter(b => b.current_break_start).length}</p>
-              </div>
-            </Card>
-          </div>
-
-          <div className="p-6 bg-white border-b border-gray-200">
-            <div className="flex flex-col md:flex-row gap-4 items-end">
-              <div className="flex-1">
-                <Input
-                  label="Start Date"
-                  type="date"
-                  value={breakFilters.startDate}
-                  onChange={(e) => setBreakFilters({ ...breakFilters, startDate: e.target.value })}
-                />
-              </div>
-              <div className="flex-1">
-                <Input
-                  label="End Date"
-                  type="date"
-                  value={breakFilters.endDate}
-                  onChange={(e) => setBreakFilters({ ...breakFilters, endDate: e.target.value })}
-                />
-              </div>
-              <Button
-                onClick={downloadBreakReport}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center mb-0.5"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download Report
-              </Button>
+      {
+        activeTab === 'breaks' && (
+          <Card className="overflow-hidden">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+              <h3 className="text-xl font-bold text-gray-900">Real-time Break Monitoring</h3>
+              <p className="text-sm text-gray-600">Monitor all agents' current break status and total break time for today.</p>
             </div>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Break Time</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">History</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {users.filter(u => u.role === 'employee').map(user => {
-                  const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
-                    total_break_seconds: 0,
-                    current_break_start: null,
-                    breaks: []
-                  };
-                  const isOnBreak = !!userBreakRecord.current_break_start;
-                  const totalSecs = userBreakRecord.total_break_seconds || 0;
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50/50 border-b border-gray-200">
+              <Card className="p-4 bg-white border-indigo-100 flex items-center gap-4">
+                <div className="p-3 bg-indigo-50 rounded-lg">
+                  <Users className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Agents</p>
+                  <p className="text-2xl font-bold text-indigo-900">{users.filter(u => u.role === 'employee').length}</p>
+                </div>
+              </Card>
+              <Card className="p-4 bg-white border-green-100 flex items-center gap-4">
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Today</p>
+                  <p className="text-2xl font-bold text-green-900">{allBreaks.length}</p>
+                </div>
+              </Card>
+              <Card className="p-4 bg-white border-purple-100 flex items-center gap-4">
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <Coffee className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">On Break Now</p>
+                  <p className="text-2xl font-bold text-purple-900">{allBreaks.filter(b => b.current_break_start).length}</p>
+                </div>
+              </Card>
+            </div>
 
-                  return (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isOnBreak ? (
-                          <div className="flex flex-col">
-                            <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 animate-pulse w-fit">
-                              On Break
+            <div className="p-6 bg-white border-b border-gray-200">
+              <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex-1">
+                  <Input
+                    label="Start Date"
+                    type="date"
+                    value={breakFilters.startDate}
+                    onChange={(e) => setBreakFilters({ ...breakFilters, startDate: e.target.value })}
+                  />
+                </div>
+                <div className="flex-1">
+                  <Input
+                    label="End Date"
+                    type="date"
+                    value={breakFilters.endDate}
+                    onChange={(e) => setBreakFilters({ ...breakFilters, endDate: e.target.value })}
+                  />
+                </div>
+                <Button
+                  onClick={downloadBreakReport}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center mb-0.5"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Report
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent Name</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Break Time</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">History</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {users.filter(u => u.role === 'employee').map(user => {
+                    const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
+                      total_break_seconds: 0,
+                      current_break_start: null,
+                      breaks: []
+                    };
+                    const isOnBreak = !!userBreakRecord.current_break_start;
+                    const totalSecs = userBreakRecord.total_break_seconds || 0;
+
+                    return (
+                      <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {isOnBreak ? (
+                            <div className="flex flex-col">
+                              <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 animate-pulse w-fit">
+                                On Break
+                              </span>
+                              <span className="text-[10px] text-purple-600 mt-1 font-mono">
+                                Start: {new Date(userBreakRecord.current_break_start).toLocaleTimeString()}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              Available
                             </span>
-                            <span className="text-[10px] text-purple-600 mt-1 font-mono">
-                              Start: {new Date(userBreakRecord.current_break_start).toLocaleTimeString()}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Available
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className="font-semibold">{formatTime(totalSecs)}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => { setSelectedUserForBreaks(user); setShowAdminBreakHistory(true); }}
-                          className="flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View History
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {showAdminBreakHistory && selectedUserForBreaks && (
-            <AdminBreakHistoryModal
-              user={selectedUserForBreaks}
-              onClose={() => setShowAdminBreakHistory(false)}
-            />
-          )}
-        </Card>
-      )}
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <span className="font-semibold">{formatTime(totalSecs)}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => { setSelectedUserForBreaks(user); setShowAdminBreakHistory(true); }}
+                            className="flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View History
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {showAdminBreakHistory && selectedUserForBreaks && (
+              <AdminBreakHistoryModal
+                user={selectedUserForBreaks}
+                onClose={() => setShowAdminBreakHistory(false)}
+              />
+            )}
+          </Card>
+        )
+      }
 
       {/* Campaigns Tab */}
       {
