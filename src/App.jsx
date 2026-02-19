@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Upload, Download, Users, BarChart3, Shield, LogOut, Filter, Check, X, Edit, Trash2, RefreshCw, Clock, CheckCircle, XCircle, Search, Plus, Eye, EyeOff, ChevronDown, Coffee, Key, AlertTriangle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from './supabaseClient';
 
 import { createClient } from '@supabase/supabase-js';
@@ -293,9 +293,9 @@ const LoginPage = () => {
       finalEmail = `${finalEmail}@ovmkr.site`;
     }
 
-    const { success, error } = await login(finalEmail, formData.password);
-    if (!success) {
-      setError(error);
+    const result = await login(finalEmail, formData.password);
+    if (!result.success) {
+      setError(result.error);
     }
   };
 
@@ -3700,7 +3700,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
   );
   const [showPassword, setShowPassword] = useState(false);
 
-  const { register, createUser } = useAuth();
+  const { createUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -3987,7 +3987,7 @@ const CampaignModal = ({ campaign, onClose, onSuccess }) => {
           </div>
         </form>
       </Card>
-    </div >
+    </div>
   );
 };
 
@@ -4176,7 +4176,7 @@ const MainLayout = () => {
 };
 
 // Main App Component
-const App = () => {
+const AppContent = () => {
   const { currentUser, isLoading } = useAuth();
 
   if (isLoading) {
@@ -4224,5 +4224,36 @@ const App = () => {
   return currentUser ? <MainLayout /> : <LoginPage />;
 };
 
+const App = () => {
+  // CSS for animations
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes blob {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -50px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.9); }
+    }
+    .animate-blob {
+      animation: blob 7s infinite;
+    }
+    .animation-delay-2000 {
+      animation-delay: 2s;
+    }
+    .animation-delay-4000 {
+      animation-delay: 4s;
+    }
+  `;
+  document.head.appendChild(style);
+
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+};
+
 // Default export
 export default App;
+
