@@ -1107,28 +1107,65 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     document.body.removeChild(link);
   };
 
-  const parseCSVLine = (text) => {
-    let result = [];
-    let cell = '';
-    let quote = false;
+  const parseCSV = (text) => {
+    const rows = [];
+    let currentRow = [];
+    let currentCell = '';
+    let inQuotes = false;
+
+    // Remove BOM if present
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
+
     for (let i = 0; i < text.length; i++) {
-      let char = text[i];
-      if (char === '"') {
-        if (i < text.length - 1 && text[i + 1] === '"') {
-          cell += '"';
-          i++;
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            currentCell += '"';
+            i++; // Skip escaped quote
+          } else {
+            inQuotes = false;
+          }
         } else {
-          quote = !quote;
+          currentCell += char;
         }
-      } else if (char === ',' && !quote) {
-        result.push(cell);
-        cell = '';
       } else {
-        cell += char;
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          currentRow.push(currentCell.trim());
+          currentCell = '';
+        } else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
+          currentRow.push(currentCell.trim());
+          if (currentRow.some(c => c)) { // Only add non-empty rows
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentCell = '';
+          if (char === '\r') i++; // Skip \n after \r
+        } else if (char === '\r') {
+          // Handle \r only (old Mac style)
+          currentRow.push(currentCell.trim());
+          if (currentRow.some(c => c)) rows.push(currentRow);
+          currentRow = [];
+          currentCell = '';
+        } else {
+          currentCell += char;
+        }
       }
     }
-    result.push(cell);
-    return result;
+
+    // Handle last row if no newline at EOF
+    if (currentCell || currentRow.length > 0) {
+      currentRow.push(currentCell.trim());
+      if (currentRow.some(c => c)) rows.push(currentRow);
+    }
+
+    return rows;
   };
 
   const handleBulkUpload = (e) => {
@@ -1142,17 +1179,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     reader.onload = (event) => {
       let text = event.target.result;
 
-      // Strip UTF-8 BOM if present
-      if (text.startsWith('\ufeff')) {
-        text = text.substring(1);
-      }
-
-      // Split rows and filter out truly empty ones (including rows that are just commas, quotes, or whitespace)
-      const rows = text.split(/\r?\n/).filter(row => {
-        const trimmed = row.trim();
-        // Regex matches any row that ONLY contains whitespace, commas, or double quotes
-        return trimmed && trimmed.replace(/[\s,"]/g, '').length > 0;
-      });
+      const rows = parseCSV(text);
 
       if (rows.length < 2) {
         alert('The CSV file appears to be empty or only contains headers.');
@@ -1161,7 +1188,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
       const processRows = async () => {
         // Parse headers
-        const rawHeaders = parseCSVLine(rows[0]);
+        const rawHeaders = rows[0];
         const headers = rawHeaders.map(h => h.trim().toLowerCase());
 
         const headerMap = headers.reduce((acc, curr, index) => {
@@ -1281,7 +1308,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         const newLeads = [];
 
         for (let i = 1; i < rows.length; i++) {
-          const columns = parseCSVLine(rows[i]);
+          const columns = rows[i];
           const companyName = getValue(columns, 'company_name');
 
           if (companyName) {
