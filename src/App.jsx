@@ -1175,9 +1175,46 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           return;
         }
 
-        // Helper to safely get value by header name
-        const getValue = (cols, fieldName) => {
-          const index = headerMap[fieldName.toLowerCase()];
+        // Column Mappings (Aliases)
+        const COL_ALIASES = {
+          'company_name': ['company name', 'company', 'organization', 'business name'],
+          'first_name': ['first name', 'first', 'fname', 'contact person', 'contact name', 'contact'],
+          'last_name': ['last name', 'last', 'lname', 'surname'],
+          'email': ['email', 'email address', 'e-mail', 'mail', 'contact email'],
+          'job_title': ['job title', 'job', 'title', 'position', 'designation', 'role'],
+          'phone_no': ['phone no', 'phone', 'mobile', 'cell', 'contact number', 'telephone'],
+          'address1': ['address 1', 'address', 'street', 'location'],
+          'zip_code': ['zip code', 'zip', 'postal code', 'pincode'],
+          'employee_size': ['employee size', 'employees', 'staff size', 'company size'],
+          'revenue_size': ['revenue size', 'revenue', 'turnover', 'annual revenue'],
+          'industry_type': ['industry type', 'industry', 'sector', 'domain'],
+          'city': ['city', 'town', 'location'],
+          'state': ['state', 'province', 'region'],
+          'country': ['country', 'nation'],
+          'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url']
+        };
+
+        // Helper to safely get value by header name or aliases
+        const getValue = (cols, fieldKey) => {
+          // 1. Try exact match from headerMap (normalized to lowercase)
+          let index = headerMap[fieldKey.toLowerCase()];
+
+          // 2. If not found, try aliases
+          if (index === undefined && COL_ALIASES[fieldKey]) {
+            for (const alias of COL_ALIASES[fieldKey]) {
+              if (headerMap[alias]) {
+                index = headerMap[alias];
+                break;
+              }
+            }
+          }
+
+          // 3. If still not found, try case-insensitive partial match for some keys (fragile but helpful)
+          if (index === undefined) {
+            const key = fieldKey.toLowerCase().replace(/_/g, ' ');
+            index = headerMap[key];
+          }
+
           if (index === undefined) return '';
           const val = cols[index];
           return val ? val.trim() : '';
@@ -1206,7 +1243,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         for (let i = 1; i < rows.length; i++) {
           const columns = parseCSVLine(rows[i]);
-          const companyName = getValue(columns, 'Company Name') || getValue(columns, 'Company');
+          const companyName = getValue(columns, 'company_name');
 
           if (companyName) {
             const rawCampaignName = selectedBulkCampaign || getValue(columns, 'Campaign');
@@ -1240,27 +1277,27 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
               campaign: campaignName,
               company_name: companyName,
               salutation: getValue(columns, 'Salutation') || 'Mr.',
-              first_name: getValue(columns, 'First Name'),
-              last_name: getValue(columns, 'Last Name'),
-              email: getValue(columns, 'Email'),
+              first_name: getValue(columns, 'first_name'),
+              last_name: getValue(columns, 'last_name'),
+              email: getValue(columns, 'email'),
               domain: getValue(columns, 'Domain'),
-              job_title: getValue(columns, 'Job Title'),
+              job_title: getValue(columns, 'job_title'),
               department: getValue(columns, 'Department') || 'Marketing',
               job_level: getValue(columns, 'Job Level') || 'Mid-level',
               job_title_link: getValue(columns, 'Job Title Link'),
-              phone_no: getValue(columns, 'Phone No') || getValue(columns, 'Phone'),
+              phone_no: getValue(columns, 'phone_no'),
               direct_dial: getValue(columns, 'Direct Dial'),
-              address1: getValue(columns, 'Address 1') || getValue(columns, 'Address'),
-              city: getValue(columns, 'City'),
-              state: getValue(columns, 'State'),
-              zip_code: getValue(columns, 'Zip Code') || getValue(columns, 'Zip'),
-              country: getValue(columns, 'Country') || 'United States',
-              industry_type: getValue(columns, 'Industry Type') || 'Technology',
+              address1: getValue(columns, 'address1'),
+              city: getValue(columns, 'city'),
+              state: getValue(columns, 'state'),
+              zip_code: getValue(columns, 'zip_code'),
+              country: getValue(columns, 'country') || 'United States',
+              industry_type: getValue(columns, 'industry_type') || 'Technology',
               industry_type_link: getValue(columns, 'Industry Type Link'),
-              employee_size: getValue(columns, 'Employee Size') || '1-10',
+              employee_size: getValue(columns, 'employee_size') || '1-10',
               associated_members: getValue(columns, 'Associated Members'),
               employee_size_link: getValue(columns, 'Employee Size Link'),
-              revenue_size: getValue(columns, 'Revenue Size'),
+              revenue_size: getValue(columns, 'revenue_size'),
               revenue_size_link: getValue(columns, 'Revenue Size Link'),
               tenure: getValue(columns, 'Tenure'),
               vv_status: getValue(columns, 'VV Status') || 'RPC Verified',
