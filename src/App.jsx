@@ -1071,12 +1071,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   // Function to download CSV template
   const downloadTemplate = () => {
     const standardHeaders = [
-      'Current Date', 'RA Name', 'Campaign', 'Company Name', 'Salutation', 'First Name', 'Last Name',
+      'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
       'Email', 'Domain', 'Job Title', 'Department', 'Job Level',
-      'Job Title Link', 'Phone No', 'Direct Dial', 'Address 1', 'City',
-      'State', 'Zip Code', 'Country', 'Industry Type', 'Industry Type Link',
-      'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue Size',
-      'Revenue Size Link', 'Tenure', 'VV Status', 'RA Comments'
+      'Job Title Link', 'Phone', 'Direct Dial', 'Address', 'City',
+      'State', 'Zip', 'Country', 'Industry', 'Industry Link',
+      'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue',
+      'Revenue Link', 'Tenure', 'VV Status', 'RA Comments'
     ];
 
     let headers = [...standardHeaders];
