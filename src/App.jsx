@@ -1097,7 +1097,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         campaignObj.custom_questions.forEach(q => headers.push(q.question));
       }
     } else {
-      // Collect all unique custom questions from active campaigns if no campaign selected
       const allCustomQuestions = new Set();
       campaigns.forEach(c => {
         if (c.is_active && c.custom_questions) {
@@ -1107,14 +1106,16 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
       headers = [...headers, ...Array.from(allCustomQuestions)];
     }
 
-    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = headers.join(",");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", selectedBulkCampaign ? `template_${selectedBulkCampaign.replace(/\s+/g, '_')}.csv` : "lead_upload_template.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const parseCSV = (text) => {
@@ -1556,6 +1557,13 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         <h3 className="font-bold text-gray-900">Contact Details</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Select
+                          label="Salutation"
+                          value={formData.salutation}
+                          onChange={(e) => setFormData({ ...formData, salutation: e.target.value })}
+                          options={['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.'].map(s => ({ value: s, label: s }))}
+                        />
+                        <div className="hidden md:block"></div>
                         <Input
                           label="First Name *"
                           value={formData.first_name}
@@ -1581,6 +1589,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                           value={formData.phone_no}
                           onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
                           placeholder="+1-123-456-7890"
+                        />
+                        <Input
+                          label="Direct Dial"
+                          value={formData.direct_dial}
+                          onChange={(e) => setFormData({ ...formData, direct_dial: e.target.value })}
+                          placeholder="+1-123-456-7890 ext 123"
                         />
                       </div>
                     </div>
@@ -1608,6 +1622,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                           value={formData.job_title}
                           onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
                         />
+                        <Input
+                          label="Job Title Link"
+                          value={formData.job_title_link}
+                          onChange={(e) => setFormData({ ...formData, job_title_link: e.target.value })}
+                          placeholder="LinkedIn URL or similar"
+                        />
                         <Select
                           label="Department"
                           value={formData.department}
@@ -1626,6 +1646,11 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                           onChange={(e) => setFormData({ ...formData, industry_type: e.target.value })}
                           options={industries.map(i => ({ value: i, label: i }))}
                         />
+                        <Input
+                          label="Industry Link"
+                          value={formData.industry_type_link}
+                          onChange={(e) => setFormData({ ...formData, industry_type_link: e.target.value })}
+                        />
                       </div>
                     </div>
 
@@ -1636,6 +1661,11 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
+                          label="Address"
+                          value={formData.address1}
+                          onChange={(e) => setFormData({ ...formData, address1: e.target.value })}
+                        />
+                        <Input
                           label="City"
                           value={formData.city}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
@@ -1645,17 +1675,44 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                           value={formData.state}
                           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                         />
+                        <Input
+                          label="Zip Code"
+                          value={formData.zip_code}
+                          onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                        />
                         <Select
                           label="Country"
                           value={formData.country}
                           onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                           options={countries.map(c => ({ value: c, label: c }))}
                         />
+                        <Input
+                          label="Associated Members"
+                          value={formData.associated_members}
+                          onChange={(e) => setFormData({ ...formData, associated_members: e.target.value })}
+                          placeholder="e.g., 5"
+                        />
                         <Select
                           label="Employee Size"
                           value={formData.employee_size}
                           onChange={(e) => setFormData({ ...formData, employee_size: e.target.value })}
                           options={employeeSizes.map(s => ({ value: s, label: s }))}
+                        />
+                        <Input
+                          label="Employee Size Link"
+                          value={formData.employee_size_link}
+                          onChange={(e) => setFormData({ ...formData, employee_size_link: e.target.value })}
+                        />
+                        <Input
+                          label="Revenue Size"
+                          value={formData.revenue_size}
+                          onChange={(e) => setFormData({ ...formData, revenue_size: e.target.value })}
+                          placeholder="e.g., $10M"
+                        />
+                        <Input
+                          label="Revenue Link"
+                          value={formData.revenue_size_link}
+                          onChange={(e) => setFormData({ ...formData, revenue_size_link: e.target.value })}
                         />
                       </div>
                     </div>
