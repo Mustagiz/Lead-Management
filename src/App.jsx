@@ -1278,7 +1278,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           'country': ['country', 'nation', 'region'],
           'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url', 'url'],
           'id': ['id', 'lead id', 'lead_id', 'record id'],
-          'status': ['status', 'state', 'lead status', 'current status']
+          'status': ['status', 'state', 'lead status', 'current status', 'leadstatus', 'lead_status', 'lead-status', 'currentstatus']
         };
 
         // Helper to safely get value by header name or aliases
@@ -1409,41 +1409,62 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           const rawStatus = (getValue(columns, 'status') || 'pending').trim().toLowerCase();
           const normalizedStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'pending';
 
-          const leadData = {
-            date: normalizeDate(getValue(columns, 'current date') || getValue(columns, 'date')),
-            ra_name: getValue(columns, 'ra name') || employeeName,
-            employee_id: employeeId,
-            status: normalizedStatus,
-            campaign: campaignName,
-            company_name: companyName,
-            salutation: getValue(columns, 'salutation') || 'Mr.',
-            first_name: getValue(columns, 'first_name'),
-            last_name: getValue(columns, 'last_name'),
-            email: email,
-            domain: getValue(columns, 'domain'),
-            job_title: getValue(columns, 'job_title'),
-            department: getValue(columns, 'department') || 'Marketing',
-            job_level: getValue(columns, 'job level') || 'Mid-level',
-            job_title_link: getValue(columns, 'job title link'),
-            phone_no: getValue(columns, 'phone_no'),
-            direct_dial: getValue(columns, 'direct dial'),
-            address1: getValue(columns, 'address1'),
-            city: getValue(columns, 'city'),
-            state: getValue(columns, 'state'),
-            zip_code: getValue(columns, 'zip_code'),
-            country: getValue(columns, 'country') || 'United States',
-            industry_type: getValue(columns, 'industry_type') || 'Technology',
-            industry_type_link: getValue(columns, 'industry type link'),
-            employee_size: getValue(columns, 'employee_size') || '1-10',
-            associated_members: getValue(columns, 'associated members'),
-            employee_size_link: getValue(columns, 'employee size link'),
-            revenue_size: getValue(columns, 'revenue_size'),
-            revenue_size_link: getValue(columns, 'revenue size link'),
-            tenure: getValue(columns, 'tenure'),
-            vv_status: getValue(columns, 'vv status') || 'RPC Verified',
-            ra_comments: getValue(columns, 'ra comments'),
-            custom_question_responses: customQuestionResponses
+          const leadData = {};
+
+          const setField = (dbKey, csvKey, fallback = null) => {
+            const val = getValue(columns, csvKey);
+            if (val !== '') {
+              leadData[dbKey] = val;
+            } else if (!leadId && fallback !== null) {
+              leadData[dbKey] = fallback;
+            }
           };
+
+          // Conditionally build leadData based on columns present in CSV
+          setField('date', 'date', normalizeDate(getValue(columns, 'current date')));
+          setField('ra_name', 'ra name', employeeName);
+          setField('employee_id', 'employee_id', employeeId);
+
+          const rawStatusVal = getValue(columns, 'status');
+          if (rawStatusVal !== '') {
+            const rawStatus = rawStatusVal.trim().toLowerCase();
+            leadData.status = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'pending';
+          } else if (!leadId) {
+            leadData.status = 'pending';
+          }
+
+          setField('campaign', 'campaign', campaignName);
+          setField('company_name', 'company_name');
+          setField('salutation', 'salutation', 'Mr.');
+          setField('first_name', 'first_name');
+          setField('last_name', 'last_name');
+          setField('email', 'email');
+          setField('domain', 'domain');
+          setField('job_title', 'job_title');
+          setField('department', 'department', 'Marketing');
+          setField('job_level', 'job level', 'Mid-level');
+          setField('job_title_link', 'job title link');
+          setField('phone_no', 'phone_no');
+          setField('direct_dial', 'direct dial');
+          setField('address1', 'address1');
+          setField('city', 'city');
+          setField('state', 'state');
+          setField('zip_code', 'zip_code');
+          setField('country', 'country', 'United States');
+          setField('industry_type', 'industry_type', 'Technology');
+          setField('industry_type_link', 'industry type link');
+          setField('employee_size', 'employee_size', '1-10');
+          setField('associated_members', 'associated members');
+          setField('employee_size_link', 'employee size link');
+          setField('revenue_size', 'revenue_size');
+          setField('revenue_size_link', 'revenue size link');
+          setField('tenure', 'tenure');
+          setField('vv_status', 'vv status', 'RPC Verified');
+          setField('ra_comments', 'ra comments');
+
+          if (Object.keys(customQuestionResponses).length > 0) {
+            leadData.custom_question_responses = customQuestionResponses;
+          }
 
           if (leadId) {
             leadData.id = leadId;
@@ -2003,7 +2024,7 @@ const QADashboard = () => {
   const { currentUser } = useAuth();
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', agent: '', campaign: '' });
+  const [filters, setFilters] = useState({ startDate: '', endDate: '', agent: '', campaign: '', status: '' });
   const [activeCampaigns, setActiveCampaigns] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [stats, setStats] = useState({ audited: 0, qualified: 0, disqualified: 0 });
@@ -2173,13 +2194,16 @@ const QADashboard = () => {
     if (filters.campaign) {
       filtered = filtered.filter(lead => (lead.campaign || '').toLowerCase().includes(filters.campaign.toLowerCase()));
     }
+    if (filters.status) {
+      filtered = filtered.filter(lead => (lead.status || '').toLowerCase() === filters.status.toLowerCase());
+    }
 
     setFilteredLeads(filtered);
     setCurrentPage(1);
   };
 
   const handleClearFilters = () => {
-    setFilters({ startDate: '', endDate: '', agent: '', campaign: '' });
+    setFilters({ startDate: '', endDate: '', agent: '', campaign: '', status: '' });
     setFilteredLeads(leads);
     setCurrentPage(1);
   };
@@ -2397,6 +2421,20 @@ const QADashboard = () => {
                 onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
                 placeholder="Search campaign..."
                 options={activeCampaigns.map(c => ({ value: c.name, label: c.name }))}
+              />
+              <SearchableSelect
+                label="Status"
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                placeholder="Select status..."
+                options={[
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'qualified', label: 'Qualified' },
+                  { value: 'disqualified', label: 'Disqualified' },
+                  { value: 'callback', label: 'Callback' },
+                  { value: 'not interested', label: 'Not Interested' },
+                  { value: 'dnc', label: 'DNC' }
+                ]}
               />
               <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1">
                 <Button
@@ -2794,6 +2832,7 @@ const AdminDashboard = () => {
     endDate: '',
     agent: '',
     campaign: '',
+    status: '',
     onlyStale: false
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -3039,6 +3078,9 @@ const AdminDashboard = () => {
     if (filters.campaign) {
       filtered = filtered.filter(lead => (lead.campaign || '').toLowerCase().includes(filters.campaign.toLowerCase()));
     }
+    if (filters.status) {
+      filtered = filtered.filter(lead => (lead.status || '').toLowerCase() === filters.status.toLowerCase());
+    }
     if (filters.onlyStale) {
       const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
       filtered = filtered.filter(lead => new Date(lead.updated_at) < fortyEightHoursAgo);
@@ -3049,7 +3091,7 @@ const AdminDashboard = () => {
   };
 
   const handleClearFilters = () => {
-    setFilters({ startDate: '', endDate: '', agent: '', campaign: '' });
+    setFilters({ startDate: '', endDate: '', agent: '', campaign: '', status: '', onlyStale: false });
     setFilteredLeads(leads);
     setCurrentPage(1);
   };
@@ -3396,6 +3438,20 @@ const AdminDashboard = () => {
                 onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
                 placeholder="Search campaign..."
                 options={campaigns.filter(c => c.is_active).map(c => ({ value: c.name, label: c.name }))}
+              />
+              <SearchableSelect
+                label="Status"
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                placeholder="Select status..."
+                options={[
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'qualified', label: 'Qualified' },
+                  { value: 'disqualified', label: 'Disqualified' },
+                  { value: 'callback', label: 'Callback' },
+                  { value: 'not interested', label: 'Not Interested' },
+                  { value: 'dnc', label: 'DNC' }
+                ]}
               />
               <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1">
                 <Button
