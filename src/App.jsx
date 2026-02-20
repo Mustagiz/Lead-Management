@@ -1451,57 +1451,68 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           return;
         }
 
-        // Batch Duplicate Check against Database (Only for NEW leads without IDs)
-        const leadsPendingInsert = newLeads.filter(l => !l.id);
-        const leadsPendingUpsert = newLeads.filter(l => l.id);
+        // Consolidated Duplicate & Ownership Check
+        const batchSize = 500;
+        const existingInfoMap = {
+          byId: {},    // { id: { employee_id, ra_name } }
+          byEmail: {}  // { email: { id, employee_id, ra_name } }
+        };
 
-        const emailsToCheck = leadsPendingInsert.map(l => l.email).filter(Boolean);
-        let finalLeadsToInsert = [...leadsPendingInsert];
-        let dbDuplicateCount = 0;
+        const idsToFetch = newLeads.map(l => l.id).filter(Boolean);
+        const emailsToFetch = newLeads.map(l => l.email).filter(Boolean);
 
-        if (emailsToCheck.length > 0) {
-          const batchSize = 500;
-          const existingLeadInfoMap = {}; // { email: { id, employee_id } }
-          for (let i = 0; i < emailsToCheck.length; i += batchSize) {
-            const batch = emailsToCheck.slice(i, i + batchSize);
-            const { data: dbLeads } = await supabase
-              .from('leads')
-              .select('id, email, employee_id')
-              .in('email', batch);
-            if (dbLeads) {
-              dbLeads.forEach(l => {
-                existingLeadInfoMap[l.email.toLowerCase()] = { id: l.id, employee_id: l.employee_id };
-              });
-            }
-          }
+        // Fetch by ID
+        for (let i = 0; i < idsToFetch.length; i += batchSize) {
+          const batch = idsToFetch.slice(i, i + batchSize);
+          const { data } = await supabase.from('leads').select('id, email, employee_id, ra_name').in('id', batch);
+          data?.forEach(l => {
+            existingInfoMap.byId[l.id] = { employee_id: l.employee_id, ra_name: l.ra_name };
+            if (l.email) existingInfoMap.byEmail[l.email.toLowerCase()] = { id: l.id, employee_id: l.employee_id, ra_name: l.ra_name };
+          });
+        }
 
-          const existingEmails = Object.keys(existingLeadInfoMap);
-          if (existingEmails.length > 0) {
-            dbDuplicateCount = existingEmails.length;
+        // Fetch by Email (for those not found by ID or without ID)
+        const remainingEmails = emailsToFetch.filter(e => !existingInfoMap.byEmail[e.toLowerCase()]);
+        for (let i = 0; i < remainingEmails.length; i += batchSize) {
+          const batch = remainingEmails.slice(i, i + batchSize);
+          const { data } = await supabase.from('leads').select('id, email, employee_id, ra_name').in('email', batch);
+          data?.forEach(l => {
+            existingInfoMap.byEmail[l.email.toLowerCase()] = { id: l.id, employee_id: l.employee_id, ra_name: l.ra_name };
+          });
+        }
 
-            if (updateExistingLeads) {
-              // Map existing IDs and PRESERVE original employee_id to avoid RLS violation
-              finalLeadsToInsert = leadsPendingInsert.map(nl => {
-                const existing = nl.email ? existingLeadInfoMap[nl.email.toLowerCase()] : null;
-                if (existing) {
-                  return {
-                    ...nl,
-                    id: existing.id,
-                    employee_id: existing.employee_id
-                  };
-                }
-                return nl;
+        const finalLeads = [];
+        dbDuplicateCount = 0;
+        let leadsToSkip = [];
+
+        for (const nl of newLeads) {
+          let existing = null;
+          if (nl.id) existing = existingInfoMap.byId[nl.id];
+          if (!existing && nl.email) existing = existingInfoMap.byEmail[nl.email.toLowerCase()];
+
+          if (existing) {
+            dbDuplicateCount++;
+            if (nl.id || updateExistingLeads) {
+              finalLeads.push({
+                ...nl,
+                id: nl.id || existing.id,
+                employee_id: existing.employee_id, // Preserve owner
+                ra_name: existing.ra_name // Preserve owner name
               });
             } else {
-              if (!window.confirm(`${dbDuplicateCount} NEW leads already exist in the database (by email). \n\nDo you want to skip these duplicates and import the remaining ${leadsPendingInsert.length - dbDuplicateCount} new leads?`)) {
-                return;
-              }
-              finalLeadsToInsert = leadsPendingInsert.filter(nl => !nl.email || !existingLeadInfoMap[nl.email.toLowerCase()]);
+              leadsToSkip.push(nl);
             }
+          } else {
+            // New record
+            finalLeads.push(nl);
           }
         }
 
-        const finalLeads = [...leadsPendingUpsert, ...finalLeadsToInsert];
+        if (leadsToSkip.length > 0) {
+          if (!window.confirm(`${leadsToSkip.length} existing leads found (matching by email). \n\nDo you want to skip these and import the remaining leads?`)) {
+            return;
+          }
+        }
 
         if (finalLeads.length === 0) {
           alert('No leads to process after duplicate check.');
