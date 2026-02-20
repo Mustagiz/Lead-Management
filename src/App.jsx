@@ -1406,8 +1406,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           const leadId = getValue(columns, 'id');
 
           const VALID_STATUSES = ['pending', 'qualified', 'disqualified', 'approved', 'rejected', 'converted', 'callback', 'not interested', 'dnc'];
-          const rawStatus = (getValue(columns, 'status') || 'pending').trim().toLowerCase();
-          const normalizedStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'pending';
+
 
           const leadData = {};
 
