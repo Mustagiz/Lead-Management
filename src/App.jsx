@@ -174,13 +174,13 @@ const AuthProvider = ({ children }) => {
 
 // Reusable Components
 const Button = ({ children, variant = 'primary', onClick, disabled, className = '', type = 'button' }) => {
-  const baseStyles = 'px-6 py-2.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-sm';
   const variants = {
-    primary: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl',
-    secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300',
-    danger: 'bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl',
-    success: 'bg-green-600 text-white hover:bg-green-700 shadow-lg hover:shadow-xl',
-    outline: 'border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50'
+    primary: 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white hover:from-indigo-700 hover:to-indigo-800 hover:shadow-indigo-200 hover:shadow-lg',
+    secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-md',
+    danger: 'bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:from-rose-600 hover:to-rose-700 hover:shadow-rose-100 hover:shadow-xl',
+    success: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 hover:shadow-emerald-100 hover:shadow-xl',
+    outline: 'border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 shadow-none'
   };
 
   return (
@@ -197,29 +197,27 @@ const Button = ({ children, variant = 'primary', onClick, disabled, className = 
 
 const Input = ({ label, error, ...props }) => (
   <div className="mb-4">
-    {label && <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>}
+    {label && <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-0.5">{label}</label>}
     <input
       {...props}
-      className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${error ? 'border-red-500' : 'border-gray-300'
-        }`}
+      className={`w-full px-4 py-2.5 bg-white border rounded-xl focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all placeholder:text-gray-400 outline-none shadow-sm ${error ? 'border-rose-300 ring-2 ring-rose-50' : 'border-gray-200'}`}
     />
-    {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    {error && <p className="mt-1.5 text-xs font-medium text-rose-500 ml-0.5 animate-in fade-in slide-in-from-top-1">{error}</p>}
   </div>
 );
 
 const Select = ({ label, options, error, ...props }) => (
   <div className="mb-4">
-    {label && <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>}
+    {label && <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-0.5">{label}</label>}
     <select
       {...props}
-      className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${error ? 'border-red-500' : 'border-gray-300'
-        }`}
+      className={`w-full px-4 py-2.5 bg-white border rounded-xl focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none shadow-sm appearance-none cursor-pointer ${error ? 'border-rose-300 ring-2 ring-rose-50' : 'border-gray-200'}`}
     >
       {options.map(opt => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
       ))}
     </select>
-    {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    {error && <p className="mt-1.5 text-xs font-medium text-rose-500 ml-0.5 animate-in fade-in slide-in-from-top-1">{error}</p>}
   </div>
 );
 
@@ -271,7 +269,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder }) => {
 };
 
 const Card = ({ children, className = '' }) => (
-  <div className={`bg-white rounded-xl shadow-lg border border-gray-100 ${className}`}>
+  <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`}>
     {children}
   </div>
 );
@@ -652,47 +650,58 @@ const EmployeeDashboard = () => {
       {activeTab === 'leads' && (
         <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-              <div className="flex items-center justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-blue-600 mb-1">Total Leads</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.total}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Total Leads</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
                 </div>
-                <BarChart3 className="w-10 h-10 text-blue-600 opacity-50" />
+                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-green-600 mb-1">Qualified</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.qualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Qualified</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.qualified}</p>
                 </div>
-                <CheckCircle className="w-10 h-10 text-green-600 opacity-50" />
+                <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-red-600 mb-1">Disqualified</p>
-                  <p className="text-3xl font-bold text-red-900">{stats.disqualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Disqualified</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.disqualified}</p>
                 </div>
-                <XCircle className="w-10 h-10 text-red-600 opacity-50" />
+                <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
+                  <XCircle className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-yellow-600 mb-1">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-900">{stats.pending}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Pending</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.pending}</p>
                 </div>
-                <Clock className="w-10 h-10 text-yellow-600 opacity-50" />
+                <div className="w-12 h-12 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-200">
+                  <Clock className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
-
           </div>
 
           {/* Filters */}
@@ -758,18 +767,18 @@ const EmployeeDashboard = () => {
           </div>
 
           {/* Leads Table */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-none shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+                <thead className="bg-gray-50/80 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Contact</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Job Title</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Company</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Job Title</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -783,10 +792,10 @@ const EmployeeDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.job_title}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                          lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+                        <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 text-green-700 border-green-100' :
+                          lead.status === 'disqualified' ? 'bg-red-50 text-red-700 border-red-100' :
+                            'bg-yellow-50 text-yellow-700 border-yellow-100'
+                          } uppercase`}>
                           {lead.status}
                         </span>
                       </td>
@@ -975,6 +984,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   const [selectedBulkCampaign, setSelectedBulkCampaign] = useState('');
   const [errors, setErrors] = useState({});
   const [campaigns, setCampaigns] = useState([]);
+  const [uploadResult, setUploadResult] = useState(null);
 
   const departments = ['HR', 'Finance', 'Marketing', 'Sales', 'IT', 'Operations', 'R&D', 'Customer Service', 'Legal', 'Supply Chain', 'Logistics', 'Administration', 'QA/QC', 'Engineering', 'Security', 'PMO', 'Corporate Strategy', 'PR', 'Facilities Management', 'Data Analytics'];
 
@@ -1432,13 +1442,13 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           successCount += batch.length;
         }
 
-        let message = `Upload Complete!\n\n- Successfully imported: ${successCount} leads`;
-        if (dbDuplicateCount > 0) message += `\n- Skipped (Database Duplicates): ${dbDuplicateCount}`;
-        if (internalDuplicateCount > 0) message += `\n- Skipped (Internal CSV Duplicates): ${internalDuplicateCount}`;
-        if (skippedCount > 0) message += `\n- Skipped (Missing Company Name): ${skippedCount}`;
-        if (missingCampaignCount > 0) message += `\n- Warning: ${missingCampaignCount} rows had unknown campaigns.`;
-
-        alert(message);
+        setUploadResult({
+          successCount,
+          dbDuplicateCount,
+          internalDuplicateCount,
+          skippedCount,
+          missingCampaignCount
+        });
         onSuccess();
         onClose();
       };
@@ -1463,302 +1473,333 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         </div>
 
         <div className="p-6">
-          {/* Toggle Upload Type - Only show if not editing */}
-          {!leadToEdit && (
-            <div className="flex gap-4 mb-6">
-              <Button
-                variant={uploadType === 'single' ? 'primary' : 'secondary'}
-                onClick={() => setUploadType('single')}
-                className="flex-1"
-              >
-                Single Lead
-              </Button>
-              <Button
-                variant={uploadType === 'bulk' ? 'primary' : 'secondary'}
-                onClick={() => setUploadType('bulk')}
-                className="flex-1"
-              >
-                Bulk Upload (CSV)
-              </Button>
-            </div>
-          )}
-
-          {uploadType === 'single' ? (
-            <form onSubmit={handleSingleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Select
-                    label="Campaign"
-                    value={formData.campaign}
-                    onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
-                    options={[
-                      { value: '', label: '-- Select Campaign --' },
-                      ...campaigns.map(c => ({ value: c.name, label: c.name }))
-                    ]}
-                  />
+          {uploadResult ? (
+            <div className="animate-in zoom-in-95 fade-in duration-500 max-w-2xl mx-auto py-8">
+              <div className="flex flex-col items-center text-center mb-10">
+                <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mb-6 shadow-sm">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-600" />
                 </div>
-
-                <Input
-                  label="Company Name *"
-                  value={formData.company_name}
-                  onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                  error={errors.company_name}
-                  required
-                />
-
-                <Select
-                  label="Salutation"
-                  value={formData.salutation}
-                  onChange={(e) => setFormData({ ...formData, salutation: e.target.value })}
-                  options={[
-                    { value: 'Mr.', label: 'Mr.' },
-                    { value: 'Mrs.', label: 'Mrs.' },
-                    { value: 'Miss', label: 'Miss' },
-                    { value: 'Ms.', label: 'Ms.' },
-                    { value: 'Dr.', label: 'Dr.' }
-                  ]}
-                />
-
-                <Input
-                  label="First Name *"
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  error={errors.first_name}
-                  required
-                />
-
-                <Input
-                  label="Last Name"
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                />
-
-                <Input
-                  label="Email *"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  error={errors.email}
-                  required
-                />
-
-                <Input
-                  label="Domain"
-                  value={formData.domain}
-                  onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                />
-
-                <Input
-                  label="Job Title"
-                  value={formData.job_title}
-                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                />
-
-                <Select
-                  label="Department"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  options={departments.map(d => ({ value: d, label: d }))}
-                />
-
-                <Select
-                  label="Job Level"
-                  value={formData.job_level}
-                  onChange={(e) => setFormData({ ...formData, job_level: e.target.value })}
-                  options={jobLevels.map(l => ({ value: l, label: l }))}
-                />
-
-                <Input
-                  label="Phone Number"
-                  value={formData.phone_no}
-                  onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
-                  placeholder="+1-123-456-7890"
-                />
-
-                <Input
-                  label="City"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                />
-
-                <Input
-                  label="State"
-                  value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                />
-
-                <Select
-                  label="Country"
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  options={countries.map(c => ({ value: c, label: c }))}
-                />
-
-                <Select
-                  label="Industry Type"
-                  value={formData.industry_type}
-                  onChange={(e) => setFormData({ ...formData, industry_type: e.target.value })}
-                  options={industries.map(i => ({ value: i, label: i }))}
-                />
-
-                <Input
-                  label="Industry Type Link"
-                  value={formData.industry_type_link}
-                  onChange={(e) => setFormData({ ...formData, industry_type_link: e.target.value })}
-                  placeholder="https://example.com"
-                />
-
-                <Select
-                  label="Employee Size"
-                  value={formData.employee_size}
-                  onChange={(e) => setFormData({ ...formData, employee_size: e.target.value })}
-                  options={employeeSizes.map(s => ({ value: s, label: s }))}
-                />
-
-                <Input
-                  label="Associated Members"
-                  value={formData.associated_members}
-                  onChange={(e) => setFormData({ ...formData, associated_members: e.target.value })}
-                  placeholder="Enter Associated Members"
-                />
-
-                <Input
-                  label="Employee Size Link"
-                  value={formData.employee_size_link}
-                  onChange={(e) => setFormData({ ...formData, employee_size_link: e.target.value })}
-                  placeholder="https://example.com"
-                />
-
-                <Input
-                  label="Revenue Size"
-                  value={formData.revenue_size}
-                  onChange={(e) => setFormData({ ...formData, revenue_size: e.target.value })}
-                  placeholder="e.g., $1M - $10M"
-                />
-
-                <Input
-                  label="Revenue Size Link"
-                  value={formData.revenue_size_link}
-                  onChange={(e) => setFormData({ ...formData, revenue_size_link: e.target.value })}
-                  placeholder="https://example.com"
-                />
-
-                <Input
-                  label="Tenure"
-                  value={formData.tenure}
-                  onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
-                  placeholder="e.g., 2 years"
-                />
-
-                <Select
-                  label="VV STATUS"
-                  value={formData.vv_status}
-                  onChange={(e) => setFormData({ ...formData, vv_status: e.target.value })}
-                  options={vvStatusOptions.map(s => ({ value: s, label: s }))}
-                />
+                <h3 className="text-3xl font-bold text-gray-900 mb-2">Upload Complete!</h3>
+                <p className="text-gray-500 text-lg">Your data has been successfully processed.</p>
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">RA Comments</label>
-                <textarea
-                  value={formData.ra_comments}
-                  onChange={(e) => setFormData({ ...formData, ra_comments: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  rows="3"
-                  placeholder="Add any comments or notes..."
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
+                <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                  <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2">Imported</p>
+                  <p className="text-4xl font-extrabold text-emerald-900">{uploadResult.successCount}</p>
+                </div>
+                <div className="p-6 bg-amber-50 border border-amber-100 rounded-2xl">
+                  <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2">DB Duplicates</p>
+                  <p className="text-4xl font-extrabold text-amber-900">{uploadResult.dbDuplicateCount}</p>
+                </div>
+                <div className="p-6 bg-blue-50 border border-blue-100 rounded-2xl">
+                  <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">CSV Duplicates</p>
+                  <p className="text-4xl font-extrabold text-blue-900">{uploadResult.internalDuplicateCount}</p>
+                </div>
+                <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Skipped Rows</p>
+                  <p className="text-4xl font-extrabold text-slate-900">{uploadResult.skippedCount}</p>
+                </div>
               </div>
 
-              {/* Custom Questions Display */}
-              {formData.campaign && campaigns.find(c => c.name === formData.campaign)?.custom_questions?.length > 0 && (
-                <div className="mt-6 border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {campaigns.find(c => c.name === formData.campaign).custom_questions.map((q) => (
-                      <div key={q.id} className="md:col-span-2">
-                        <Input
-                          label={q.question}
-                          value={formData.custom_question_responses?.[q.id] || ''}
-                          onChange={(e) => {
-                            setFormData({
-                              ...formData,
-                              custom_question_responses: {
-                                ...formData.custom_question_responses,
-                                [q.id]: e.target.value
-                              }
-                            });
-                          }}
-                          placeholder={`Enter answer for: ${q.question}`}
-                        />
-                      </div>
-                    ))}
-                  </div>
+              {uploadResult.missingCampaignCount > 0 && (
+                <div className="p-5 bg-amber-100/50 rounded-2xl border border-amber-200 flex gap-4 mb-10">
+                  <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm text-amber-900 font-medium">
+                    <span className="font-bold">Note:</span> {uploadResult.missingCampaignCount} rows had unknown campaign names and were set to 'None'.
+                  </p>
                 </div>
               )}
 
-              <div className="flex justify-end gap-4 mt-6">
-                <Button variant="secondary" onClick={onClose} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  <Upload className="w-4 h-4 mr-2" />
-                  {leadToEdit ? 'Update Lead' : 'Upload Lead'}
-                </Button>
-              </div>
-            </form>
+              <Button onClick={() => { setUploadResult(null); onClose(); }} className="w-full py-4 text-lg">
+                Return to Dashboard
+              </Button>
+            </div>
           ) : (
-            <form onSubmit={handleBulkUpload}>
-              <div className="mb-6">
-                <Select
-                  label="Select Campaign for these Leads"
-                  value={selectedBulkCampaign}
-                  onChange={(e) => setSelectedBulkCampaign(e.target.value)}
-                  options={[
-                    { value: '', label: '-- Use Campaign Names from CSV --' },
-                    ...campaigns.map(c => ({ value: c.name, label: c.name }))
-                  ]}
-                />
-                <p className="mt-1 text-xs text-gray-500 italic">
-                  * If selected, this will apply to ALL leads in the CSV.
-                </p>
-              </div>
-
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">Upload CSV file with leads</p>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => setCsvFile(e.target.files[0])}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-                <div className="mt-4 flex flex-col gap-2">
+            <>
+              {/* Toggle Upload Type - Only show if not editing */}
+              {!leadToEdit && (
+                <div className="flex bg-gray-50 p-1.5 rounded-2xl mb-8 border border-gray-100">
                   <button
-                    type="button"
-                    onClick={downloadTemplate}
-                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium underline flex items-center justify-center gap-1"
+                    onClick={() => setUploadType('single')}
+                    className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 ${uploadType === 'single' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    <Download className="w-4 h-4" />
-                    {selectedBulkCampaign ? `Download Template for ${selectedBulkCampaign}` : 'Download Standard CSV Template'}
+                    Single Lead
                   </button>
-                  <p className="text-xs text-gray-500">
-                    {selectedBulkCampaign
-                      ? `Template includes standard fields + custom questions for ${selectedBulkCampaign}.`
-                      : 'Includes all fields: Campaign, Company, Contact Info, Revenue, etc.'}
-                  </p>
+                  <button
+                    onClick={() => setUploadType('bulk')}
+                    className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 ${uploadType === 'bulk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    Bulk Upload (CSV)
+                  </button>
                 </div>
-              </div>
+              )}
 
-              <div className="flex justify-end gap-4 mt-6">
-                <Button variant="secondary" onClick={onClose} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload CSV
-                </Button>
-              </div>
-            </form>
+              {uploadType === 'single' ? (
+                <form onSubmit={handleSingleSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <Select
+                        label="Campaign"
+                        value={formData.campaign}
+                        onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
+                        options={[
+                          { value: '', label: '-- Select Campaign --' },
+                          ...campaigns.map(c => ({ value: c.name, label: c.name }))
+                        ]}
+                      />
+                    </div>
+
+                    <div className="md:col-span-2 space-y-4">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                        <Target className="w-5 h-5 text-indigo-600" />
+                        <h3 className="font-bold text-gray-900">Contact Details</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          label="First Name *"
+                          value={formData.first_name}
+                          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                          error={errors.first_name}
+                          required
+                        />
+                        <Input
+                          label="Last Name"
+                          value={formData.last_name}
+                          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                        />
+                        <Input
+                          label="Email *"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          error={errors.email}
+                          required
+                        />
+                        <Input
+                          label="Phone Number"
+                          value={formData.phone_no}
+                          onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
+                          placeholder="+1-123-456-7890"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-4 mt-6">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                        <Building2 className="w-5 h-5 text-indigo-600" />
+                        <h3 className="font-bold text-gray-900">Company & Professional Info</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          label="Company Name *"
+                          value={formData.company_name}
+                          onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                          error={errors.company_name}
+                          required
+                        />
+                        <Input
+                          label="Domain"
+                          value={formData.domain}
+                          onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+                        />
+                        <Input
+                          label="Job Title"
+                          value={formData.job_title}
+                          onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                        />
+                        <Select
+                          label="Department"
+                          value={formData.department}
+                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                          options={departments.map(d => ({ value: d, label: d }))}
+                        />
+                        <Select
+                          label="Job Level"
+                          value={formData.job_level}
+                          onChange={(e) => setFormData({ ...formData, job_level: e.target.value })}
+                          options={jobLevels.map(l => ({ value: l, label: l }))}
+                        />
+                        <Select
+                          label="Industry Type"
+                          value={formData.industry_type}
+                          onChange={(e) => setFormData({ ...formData, industry_type: e.target.value })}
+                          options={industries.map(i => ({ value: i, label: i }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-4 mt-6">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                        <Globe className="w-5 h-5 text-indigo-600" />
+                        <h3 className="font-bold text-gray-900">Location & Size</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          label="City"
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        />
+                        <Input
+                          label="State"
+                          value={formData.state}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                        />
+                        <Select
+                          label="Country"
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                          options={countries.map(c => ({ value: c, label: c }))}
+                        />
+                        <Select
+                          label="Employee Size"
+                          value={formData.employee_size}
+                          onChange={(e) => setFormData({ ...formData, employee_size: e.target.value })}
+                          options={employeeSizes.map(s => ({ value: s, label: s }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-4 mt-6">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                        <ClipboardCheck className="w-5 h-5 text-indigo-600" />
+                        <h3 className="font-bold text-gray-900">Verification & Status</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Select
+                          label="VV STATUS"
+                          value={formData.vv_status}
+                          onChange={(e) => setFormData({ ...formData, vv_status: e.target.value })}
+                          options={vvStatusOptions.map(s => ({ value: s, label: s }))}
+                        />
+                        <Input
+                          label="Tenure"
+                          value={formData.tenure}
+                          onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
+                          placeholder="e.g., 2 years"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">RA Comments</label>
+                    <textarea
+                      value={formData.ra_comments}
+                      onChange={(e) => setFormData({ ...formData, ra_comments: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      rows="3"
+                      placeholder="Add any comments or notes..."
+                    />
+                  </div>
+
+                  {/* Custom Questions Display */}
+                  {formData.campaign && campaigns.find(c => c.name === formData.campaign)?.custom_questions?.length > 0 && (
+                    <div className="mt-6 border-t pt-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {campaigns.find(c => c.name === formData.campaign).custom_questions.map((q) => (
+                          <div key={q.id} className="md:col-span-2">
+                            <Input
+                              label={q.question}
+                              value={formData.custom_question_responses?.[q.id] || ''}
+                              onChange={(e) => {
+                                setFormData({
+                                  ...formData,
+                                  custom_question_responses: {
+                                    ...formData.custom_question_responses,
+                                    [q.id]: e.target.value
+                                  }
+                                });
+                              }}
+                              placeholder={`Enter answer for: ${q.question}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-4 mt-10 pt-6 border-t border-gray-100">
+                    <Button variant="secondary" onClick={onClose} type="button">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="min-w-[150px]">
+                      <Upload className="w-4 h-4 mr-2" />
+                      {leadToEdit ? 'Update Lead' : 'Upload Lead'}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleBulkUpload} className="animate-in fade-in duration-500">
+                  <div className="mb-8">
+                    <Select
+                      label="Select Campaign for these Leads"
+                      value={selectedBulkCampaign}
+                      onChange={(e) => setSelectedBulkCampaign(e.target.value)}
+                      options={[
+                        { value: '', label: '-- Use Campaign Names from CSV --' },
+                        ...campaigns.map(c => ({ value: c.name, label: c.name }))
+                      ]}
+                    />
+                    <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-indigo-50/50 rounded-lg">
+                      <AlertCircle className="w-4 h-4 text-indigo-600" />
+                      <p className="text-xs text-indigo-700 font-medium">
+                        If selected, this will apply to ALL leads in the CSV.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="group relative border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center transition-all hover:border-indigo-300 hover:bg-gray-50/50 cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => setCsvFile(e.target.files[0])}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                        <Upload className="w-8 h-8 text-gray-400 group-hover:text-indigo-600" />
+                      </div>
+                      <p className="text-gray-900 font-bold text-lg mb-1">
+                        {csvFile ? csvFile.name : 'Click to upload or drag & drop'}
+                      </p>
+                      <p className="text-gray-500 text-sm">Supported format: .csv</p>
+                    </div>
+
+                    <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={downloadTemplate}
+                        className="group/link text-indigo-600 hover:text-indigo-700 font-bold flex items-center gap-2 transition-colors"
+                      >
+                        <div className="p-2 bg-indigo-50 rounded-lg group-hover/link:bg-indigo-100 transition-colors">
+                          <Download className="w-4 h-4" />
+                        </div>
+                        <span className="underline underline-offset-4 decoration-indigo-200">
+                          {selectedBulkCampaign ? `Download Template for ${selectedBulkCampaign}` : 'Download Standard CSV Template'}
+                        </span>
+                      </button>
+                      <p className="text-xs text-gray-400 max-w-sm">
+                        {selectedBulkCampaign
+                          ? `Template includes standard fields + custom questions for ${selectedBulkCampaign}.`
+                          : 'Includes all fields: Campaign, Company, Contact Info, Revenue, etc.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-4 mt-10 pt-6 border-t border-gray-100">
+                    <Button variant="secondary" onClick={onClose} type="button">
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={!csvFile} className="min-w-[150px]">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Process CSV
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </>
           )}
         </div>
       </Card>
@@ -2087,34 +2128,43 @@ const QADashboard = () => {
       {activeTab === 'leads' && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-              <div className="flex items-center justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-purple-600 mb-1">Total Audited</p>
-                  <p className="text-3xl font-bold text-purple-900">{stats.audited}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Total Audited</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.audited}</p>
                 </div>
-                <CheckCircle className="w-10 h-10 text-purple-600 opacity-50" />
+                <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-green-600 mb-1">Qualified</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.qualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Qualified</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.qualified}</p>
                 </div>
-                <Check className="w-10 h-10 text-green-600 opacity-50" />
+                <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                  <Check className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-red-600 mb-1">Disqualified</p>
-                  <p className="text-3xl font-bold text-red-900">{stats.disqualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Disqualified</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.disqualified}</p>
                 </div>
-                <X className="w-10 h-10 text-red-600 opacity-50" />
+                <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
+                  <X className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
           </div>
@@ -2204,12 +2254,12 @@ const QADashboard = () => {
           </div>
 
           {/* Leads Table */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-none shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-purple-50 to-indigo-50">
+                <thead className="bg-gray-50/80 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-4">
+                    <th className="px-6 py-5">
                       <input
                         type="checkbox"
                         onChange={(e) => {
@@ -2255,10 +2305,10 @@ const QADashboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                          lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+                        <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 text-green-700 border-green-100' :
+                          lead.status === 'disqualified' ? 'bg-red-50 text-red-700 border-red-100' :
+                            'bg-yellow-50 text-yellow-700 border-yellow-100'
+                          } uppercase`}>
                           {lead.status}
                         </span>
                       </td>
@@ -2986,46 +3036,58 @@ const AdminDashboard = () => {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-              <div className="flex items-center justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-blue-600 mb-1">Total Leads</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.totalLeads}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Total Leads</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalLeads}</p>
                 </div>
-                <BarChart3 className="w-10 h-10 text-blue-600 opacity-50" />
+                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-green-600 mb-1">Qualified</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.qualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Qualified</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.qualified}</p>
                 </div>
-                <CheckCircle className="w-10 h-10 text-green-600 opacity-50" />
+                <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-red-600 mb-1">Disqualified</p>
-                  <p className="text-3xl font-bold text-red-900">{stats.disqualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Disqualified</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.disqualified}</p>
                 </div>
-                <XCircle className="w-10 h-10 text-red-600 opacity-50" />
+                <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
+                  <XCircle className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white border-none shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-purple-600 mb-1">Active Breaks</p>
-                  <p className="text-3xl font-bold text-purple-900">
+                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Active Breaks</p>
+                  <p className="text-3xl font-bold text-gray-900">
                     {allBreaks.filter(b => b.current_break_start).length}
                   </p>
                 </div>
-                <Coffee className="w-10 h-10 text-purple-600 opacity-50" />
+                <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
+                  <Coffee className="w-6 h-6 text-white" />
+                </div>
               </div>
             </Card>
           </div>
@@ -3164,12 +3226,12 @@ const AdminDashboard = () => {
             </Card>
           )}
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-none shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+                <thead className="bg-gray-50/80 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-4">
+                    <th className="px-6 py-5">
                       <input
                         type="checkbox"
                         onChange={handleSelectAllLeads}
@@ -3205,10 +3267,10 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                            lead.status === 'disqualified' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
+                          <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 text-green-700 border-green-100' :
+                            lead.status === 'disqualified' ? 'bg-red-50 text-red-700 border-red-100' :
+                              'bg-yellow-50 text-yellow-700 border-yellow-100'
+                            } uppercase`}>
                             {lead.status}
                           </span>
                         </td>
@@ -3586,8 +3648,8 @@ const AdminDashboard = () => {
       {/* Break Monitoring Tab */}
       {
         activeTab === 'breaks' && (
-          <Card className="overflow-hidden">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <Card className="overflow-hidden border-none shadow-sm">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50">
               <h3 className="text-xl font-bold text-gray-900">Real-time Break Monitoring</h3>
               <p className="text-sm text-gray-600">Monitor all agents' current break status and total break time for today.</p>
             </div>
@@ -3652,12 +3714,12 @@ const AdminDashboard = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50/80 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Agent Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Break Time</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">History</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Agent Name</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Total Break Time</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">History</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -3728,17 +3790,17 @@ const AdminDashboard = () => {
               </Button>
             </div>
 
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+                  <thead className="bg-gray-50/80 border-b border-gray-100">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Campaign Name</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Description</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created By</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Campaign Name</th>
+                      <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Created By</th>
+                      <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Created Date</th>
+                      <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -4228,18 +4290,21 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BarChart3 className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-4 group cursor-pointer">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-105 transition-transform duration-300">
+                <BarChart3 className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
                   Lead Manager Pro
                 </h1>
-                <p className="text-xs text-gray-600">{currentUser.role.toUpperCase()} Dashboard</p>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{currentUser.role} NODE ACTIVE</p>
+                </div>
               </div>
             </div>
 
@@ -4253,10 +4318,10 @@ const MainLayout = () => {
               </Button>
               <Button
                 onClick={logout}
-                className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 flex items-center gap-2 font-semibold transition-all hover:shadow-sm"
+                className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-100 px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all duration-300 shadow-sm hover:shadow-red-200"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Logout</span>
+                <span>Sign Out</span>
               </Button>
             </div>
           </div>
@@ -4278,9 +4343,23 @@ const MainLayout = () => {
       )}
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-600">
-          © Outvying 2026 Lead Manager Pro. All rights reserved.
+      <footer className="bg-white border-t border-gray-100 mt-12">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-gray-400" />
+              </div>
+              <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Lead Manager Pro</span>
+            </div>
+            <p className="text-gray-400 text-xs font-medium">
+              © 2026 Outvying Global. All rights reserved.
+            </p>
+            <div className="flex gap-6">
+              <span className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer transition-colors">Privacy Policy</span>
+              <span className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer transition-colors">Terms of Service</span>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
