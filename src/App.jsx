@@ -1079,43 +1079,59 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   };
 
   // Function to download CSV template
-  const downloadTemplate = () => {
-    const standardHeaders = [
-      'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
-      'Email', 'Domain', 'Job Title', 'Department', 'Job Level',
-      'Job Title Link', 'Phone', 'Direct Dial', 'Address', 'City',
-      'State', 'Zip', 'Country', 'Industry', 'Industry Link',
-      'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue',
-      'Revenue Link', 'Tenure', 'VV Status', 'RA Comments'
-    ];
-
-    let headers = [...standardHeaders];
-
-    if (selectedBulkCampaign) {
-      const campaignObj = campaigns.find(c => c.name === selectedBulkCampaign);
-      if (campaignObj && campaignObj.custom_questions) {
-        campaignObj.custom_questions.forEach(q => headers.push(q.question));
-      }
-    } else {
-      const allCustomQuestions = new Set();
-      campaigns.forEach(c => {
-        if (c.is_active && c.custom_questions) {
-          c.custom_questions.forEach(q => allCustomQuestions.add(q.question));
-        }
-      });
-      headers = [...headers, ...Array.from(allCustomQuestions)];
+  const downloadTemplate = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
 
-    const csvContent = headers.join(",");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", selectedBulkCampaign ? `template_${selectedBulkCampaign.replace(/\s+/g, '_')}.csv` : "lead_upload_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+      const standardHeaders = [
+        'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
+        'Email', 'Domain', 'Job Title', 'Department', 'Job Level',
+        'Job Title Link', 'Phone', 'Direct Dial', 'Address', 'City',
+        'State', 'Zip', 'Country', 'Industry', 'Industry Link',
+        'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue',
+        'Revenue Link', 'Tenure', 'VV Status', 'RA Comments'
+      ];
+
+      let headers = [...standardHeaders];
+
+      if (selectedBulkCampaign) {
+        const campaignObj = campaigns.find(c => c.name === selectedBulkCampaign);
+        if (campaignObj && campaignObj.custom_questions) {
+          campaignObj.custom_questions.forEach(q => headers.push(q.question));
+        }
+      } else {
+        const allCustomQuestions = new Set();
+        campaigns.forEach(c => {
+          if (c.is_active && c.custom_questions) {
+            c.custom_questions.forEach(q => allCustomQuestions.add(q.question));
+          }
+        });
+        headers = [...headers, ...Array.from(allCustomQuestions)];
+      }
+
+      const csvContent = headers.join(",") + "\n";
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.style.display = 'none';
+      link.href = url;
+      link.setAttribute("download", selectedBulkCampaign ? `template_${selectedBulkCampaign.replace(/\s+/g, '_')}.csv` : "lead_upload_template.csv");
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup with delay to ensure download starts
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error('Template download error:', err);
+      alert('Failed to generate template. Please try again.');
+    }
   };
 
   const parseCSV = (text) => {
@@ -1824,11 +1840,11 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                       <p className="text-gray-500 text-sm">Supported format: .csv</p>
                     </div>
 
-                    <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center gap-4">
+                    <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center gap-4 relative z-10">
                       <button
                         type="button"
                         onClick={downloadTemplate}
-                        className="group/link text-indigo-600 hover:text-indigo-700 font-bold flex items-center gap-2 transition-colors"
+                        className="group/link text-indigo-600 hover:text-indigo-700 font-bold flex items-center gap-2 transition-colors pointer-events-auto"
                       >
                         <div className="p-2 bg-indigo-50 rounded-lg group-hover/link:bg-indigo-100 transition-colors">
                           <Download className="w-4 h-4" />
