@@ -2754,6 +2754,8 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
 
 // Admin Dashboard
 const AdminDashboard = () => {
+  const { currentUser } = useAuth();
+
   const [activeTab, setActiveTab] = useState('overview');
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
