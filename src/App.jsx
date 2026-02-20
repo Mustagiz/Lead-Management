@@ -1014,6 +1014,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   const [errors, setErrors] = useState({});
   const [campaigns, setCampaigns] = useState([]);
   const [uploadResult, setUploadResult] = useState(null);
+  const [updateExistingLeads, setUpdateExistingLeads] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const departments = ['HR', 'Finance', 'Marketing', 'Sales', 'IT', 'Operations', 'R&D', 'Customer Service', 'Legal', 'Supply Chain', 'Logistics', 'Administration', 'QA/QC', 'Engineering', 'Security', 'PMO', 'Corporate Strategy', 'PR', 'Facilities Management', 'Data Analytics'];
 
@@ -1274,7 +1276,9 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           'city': ['city', 'town', 'location', 'municipality'],
           'state': ['state', 'province', 'region', 'district'],
           'country': ['country', 'nation', 'region'],
-          'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url', 'url']
+          'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url', 'url'],
+          'id': ['id', 'lead id', 'lead_id', 'record id'],
+          'status': ['status', 'state', 'lead status', 'current status']
         };
 
         // Helper to safely get value by header name or aliases
@@ -1458,22 +1462,38 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         if (emailsToCheck.length > 0) {
           const batchSize = 500;
-          const existingEmails = [];
+          const existingEmailMap = {}; // { email: id }
           for (let i = 0; i < emailsToCheck.length; i += batchSize) {
             const batch = emailsToCheck.slice(i, i + batchSize);
             const { data: dbLeads } = await supabase
               .from('leads')
-              .select('email')
+              .select('id, email')
               .in('email', batch);
-            if (dbLeads) existingEmails.push(...dbLeads.map(l => l.email.toLowerCase()));
+            if (dbLeads) {
+              dbLeads.forEach(l => {
+                existingEmailMap[l.email.toLowerCase()] = l.id;
+              });
+            }
           }
 
+          const existingEmails = Object.keys(existingEmailMap);
           if (existingEmails.length > 0) {
             dbDuplicateCount = existingEmails.length;
-            if (!window.confirm(`${dbDuplicateCount} NEW leads already exist in the database (by email). \n\nDo you want to skip these duplicates and import the remaining ${leadsPendingInsert.length - dbDuplicateCount} new leads?`)) {
-              return;
+
+            if (updateExistingLeads) {
+              // Map existing IDs to the newLeads
+              finalLeadsToInsert = leadsPendingInsert.map(nl => {
+                if (nl.email && existingEmailMap[nl.email.toLowerCase()]) {
+                  return { ...nl, id: existingEmailMap[nl.email.toLowerCase()] };
+                }
+                return nl;
+              });
+            } else {
+              if (!window.confirm(`${dbDuplicateCount} NEW leads already exist in the database (by email). \n\nDo you want to skip these duplicates and import the remaining ${leadsPendingInsert.length - dbDuplicateCount} new leads?`)) {
+                return;
+              }
+              finalLeadsToInsert = leadsPendingInsert.filter(nl => !nl.email || !existingEmailMap[nl.email.toLowerCase()]);
             }
-            finalLeadsToInsert = leadsPendingInsert.filter(nl => !nl.email || !existingEmails.includes(nl.email.toLowerCase()));
           }
         }
 
