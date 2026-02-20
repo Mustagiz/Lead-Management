@@ -1403,11 +1403,15 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
           const leadId = getValue(columns, 'id');
 
+          const VALID_STATUSES = ['pending', 'approved', 'rejected', 'converted', 'callback', 'not interested', 'dnc'];
+          const rawStatus = (getValue(columns, 'Status') || 'pending').trim().toLowerCase();
+          const normalizedStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'pending';
+
           const leadData = {
             date: normalizeDate(getValue(columns, 'Current Date') || getValue(columns, 'Date')),
             ra_name: getValue(columns, 'RA Name') || employeeName,
             employee_id: employeeId,
-            status: getValue(columns, 'Status') || 'pending',
+            status: normalizedStatus,
             campaign: campaignName,
             company_name: companyName,
             salutation: getValue(columns, 'Salutation') || 'Mr.',
