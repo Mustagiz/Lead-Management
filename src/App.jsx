@@ -1283,10 +1283,11 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         // Helper to safely get value by header name or aliases
         const getValue = (cols, fieldKey) => {
-          let index = headerMap[fieldKey.toLowerCase()];
+          const normalizedKey = fieldKey.toLowerCase();
+          let index = headerMap[normalizedKey];
 
-          if (index === undefined && COL_ALIASES[fieldKey]) {
-            for (const alias of COL_ALIASES[fieldKey]) {
+          if (index === undefined && COL_ALIASES[normalizedKey]) {
+            for (const alias of COL_ALIASES[normalizedKey]) {
               if (headerMap[alias] !== undefined) {
                 index = headerMap[alias];
                 break;
@@ -1404,43 +1405,43 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
           const leadId = getValue(columns, 'id');
 
-          const VALID_STATUSES = ['pending', 'approved', 'rejected', 'converted', 'callback', 'not interested', 'dnc'];
-          const rawStatus = (getValue(columns, 'Status') || 'pending').trim().toLowerCase();
+          const VALID_STATUSES = ['pending', 'qualified', 'disqualified', 'approved', 'rejected', 'converted', 'callback', 'not interested', 'dnc'];
+          const rawStatus = (getValue(columns, 'status') || 'pending').trim().toLowerCase();
           const normalizedStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'pending';
 
           const leadData = {
-            date: normalizeDate(getValue(columns, 'Current Date') || getValue(columns, 'Date')),
-            ra_name: getValue(columns, 'RA Name') || employeeName,
+            date: normalizeDate(getValue(columns, 'current date') || getValue(columns, 'date')),
+            ra_name: getValue(columns, 'ra name') || employeeName,
             employee_id: employeeId,
             status: normalizedStatus,
             campaign: campaignName,
             company_name: companyName,
-            salutation: getValue(columns, 'Salutation') || 'Mr.',
+            salutation: getValue(columns, 'salutation') || 'Mr.',
             first_name: getValue(columns, 'first_name'),
             last_name: getValue(columns, 'last_name'),
             email: email,
-            domain: getValue(columns, 'Domain'),
+            domain: getValue(columns, 'domain'),
             job_title: getValue(columns, 'job_title'),
-            department: getValue(columns, 'Department') || 'Marketing',
-            job_level: getValue(columns, 'Job Level') || 'Mid-level',
-            job_title_link: getValue(columns, 'Job Title Link'),
+            department: getValue(columns, 'department') || 'Marketing',
+            job_level: getValue(columns, 'job level') || 'Mid-level',
+            job_title_link: getValue(columns, 'job title link'),
             phone_no: getValue(columns, 'phone_no'),
-            direct_dial: getValue(columns, 'Direct Dial'),
+            direct_dial: getValue(columns, 'direct dial'),
             address1: getValue(columns, 'address1'),
             city: getValue(columns, 'city'),
             state: getValue(columns, 'state'),
             zip_code: getValue(columns, 'zip_code'),
             country: getValue(columns, 'country') || 'United States',
             industry_type: getValue(columns, 'industry_type') || 'Technology',
-            industry_type_link: getValue(columns, 'Industry Type Link'),
+            industry_type_link: getValue(columns, 'industry type link'),
             employee_size: getValue(columns, 'employee_size') || '1-10',
-            associated_members: getValue(columns, 'Associated Members'),
-            employee_size_link: getValue(columns, 'Employee Size Link'),
+            associated_members: getValue(columns, 'associated members'),
+            employee_size_link: getValue(columns, 'employee size link'),
             revenue_size: getValue(columns, 'revenue_size'),
-            revenue_size_link: getValue(columns, 'Revenue Size Link'),
-            tenure: getValue(columns, 'Tenure'),
-            vv_status: getValue(columns, 'VV Status') || 'RPC Verified',
-            ra_comments: getValue(columns, 'RA Comments'),
+            revenue_size_link: getValue(columns, 'revenue size link'),
+            tenure: getValue(columns, 'tenure'),
+            vv_status: getValue(columns, 'vv status') || 'RPC Verified',
+            ra_comments: getValue(columns, 'ra comments'),
             custom_question_responses: customQuestionResponses
           };
 
