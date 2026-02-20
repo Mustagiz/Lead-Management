@@ -175,13 +175,25 @@ const AuthProvider = ({ children }) => {
 // Helper to format date for display (DD/MM/YYYY)
 const formatDisplayDate = (dateStr) => {
   if (!dateStr) return '';
+  if (typeof dateStr !== 'string') return dateStr;
+
+  // Pattern: YYYY-MM-DD (ISO)
+  const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [_, y, m, d] = isoMatch;
+    return `${d}/${m}/${y}`;
+  }
+
+  // General fallback for other string formats
   try {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    // For non-ISO strings, new Date() is safer but still check for shifts
+    // Use Intl.DateTimeFormat for consistent formatting if possible
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
   } catch (e) {
     return dateStr;
   }
@@ -492,7 +504,7 @@ const EmployeeDashboard = () => {
       }
 
       return [
-        lead.date,
+        formatDisplayDate(lead.date),
         lead.ra_name,
         lead.campaign || '',
         lead.company_name,
@@ -1322,8 +1334,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
               } else if (p2 > 12) { // MM-DD-YYYY
                 m = parts[0]; d = parts[1];
               } else {
-                // Ambiguous, assume MM-DD-YYYY
-                m = parts[0]; d = parts[1];
+                // Ambiguous, assume DD-MM-YYYY as per user preference
+                d = parts[0]; m = parts[1];
               }
             }
             if (y && m && d) return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
@@ -3090,10 +3102,10 @@ const AdminDashboard = () => {
               ? `${Math.floor(b.durationSeconds / 60)}:${(b.durationSeconds % 60).toString().padStart(2, '0')}`
               : (b.duration ? `${b.duration} min` : '-');
 
-            rows.push([agentName, date, startStr, endStr, duration, dailyTotal]);
+            rows.push([agentName, formatDisplayDate(date), startStr, endStr, duration, dailyTotal]);
           });
         } else {
-          rows.push([agentName, date, '-', '-', '0:00', dailyTotal]);
+          rows.push([agentName, formatDisplayDate(date), '-', '-', '0:00', dailyTotal]);
         }
       });
 
@@ -3943,7 +3955,7 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{campaign.name}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{campaign.description}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{campaign.createdBy}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{campaign.createdAt}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDisplayDate(campaign.createdAt)}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={() => toggleCampaignStatus(campaign.id)}
