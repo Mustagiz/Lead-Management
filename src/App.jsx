@@ -1530,19 +1530,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         const leadsToUpsert = finalLeads.filter(l => l.id);
         const leadsToInsert = finalLeads.filter(l => !l.id);
 
-        // Process Upserts
+        // Process Updates via SECURITY DEFINER RPC function (bypasses RLS)
         for (let i = 0; i < leadsToUpsert.length; i += insertBatchSize) {
           const batch = leadsToUpsert.slice(i, i + insertBatchSize);
-          const { error } = await supabase.from('leads').upsert(batch);
+          const { error } = await supabase.rpc('bulk_upsert_leads', {
+            leads_data: batch
+          });
           if (error) {
-            console.error('Upsert error at batch:', i, error);
+            console.error('RPC upsert error at batch:', i, error);
             alert(`Error updating records at row ${i + 1}: ${error.message}`);
             return;
           }
           successCount += batch.length;
         }
 
-        // Process Inserts
+        // Process New Inserts (standard insert, no RLS conflict for new records)
         for (let i = 0; i < leadsToInsert.length; i += insertBatchSize) {
           const batch = leadsToInsert.slice(i, i + insertBatchSize);
           const { error } = await supabase.from('leads').insert(batch);
