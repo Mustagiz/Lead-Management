@@ -1482,7 +1482,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }
 
         const finalLeads = [];
-        dbDuplicateCount = 0;
+        let dbDuplicateCount = 0;
         let leadsToSkip = [];
 
         for (const nl of newLeads) {
