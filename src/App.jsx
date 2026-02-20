@@ -2372,11 +2372,12 @@ const QADashboard = () => {
                 value={filters.endDate}
                 onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
               />
-              <Input
+              <SearchableSelect
                 label="Agent Name"
                 value={filters.agent}
                 onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
-                placeholder="Search by agent name"
+                placeholder="Select agent..."
+                options={[...new Set(leads.map(l => l.ra_name).filter(Boolean))].sort().map(name => ({ value: name, label: name }))}
               />
               <SearchableSelect
                 label="Campaign Name"
@@ -3365,11 +3366,12 @@ const AdminDashboard = () => {
                 value={filters.endDate}
                 onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
               />
-              <Input
+              <SearchableSelect
                 label="Agent Name"
                 value={filters.agent}
                 onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
-                placeholder="Search by agent name"
+                placeholder="Select agent..."
+                options={[...new Set(leads.map(l => l.ra_name).filter(Boolean))].sort().map(name => ({ value: name, label: name }))}
               />
               <SearchableSelect
                 label="Campaign Name"
