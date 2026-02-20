@@ -800,6 +800,7 @@ const EmployeeDashboard = () => {
                 <thead className="bg-gray-50/80 border-b border-gray-100">
                   <tr>
                     <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Campaign</th>
                     <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Company</th>
                     <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
                     <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
@@ -812,6 +813,7 @@ const EmployeeDashboard = () => {
                   {paginatedLeads.map((lead, index) => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDisplayDate(lead.date)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.campaign || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {lead.salutation} {lead.first_name} {lead.last_name}
@@ -2429,6 +2431,7 @@ const QADashboard = () => {
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDisplayDate(lead.date)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.campaign || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -3406,6 +3409,7 @@ const AdminDashboard = () => {
                           />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDisplayDate(lead.date)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.campaign || '-'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
