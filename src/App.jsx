@@ -1204,39 +1204,36 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         // Column Mappings (Aliases)
         const COL_ALIASES = {
-          'company_name': ['company name', 'company', 'organization', 'business name'],
-          'first_name': ['first name', 'first', 'fname', 'contact person', 'contact name', 'contact'],
+          'company_name': ['company name', 'company', 'organization', 'business name', 'client'],
+          'first_name': ['first name', 'first', 'fname', 'contact person', 'contact name', 'contact', 'name'],
           'last_name': ['last name', 'last', 'lname', 'surname'],
-          'email': ['email', 'email address', 'e-mail', 'mail', 'contact email'],
-          'job_title': ['job title', 'job', 'title', 'position', 'designation', 'role'],
-          'phone_no': ['phone no', 'phone', 'mobile', 'cell', 'contact number', 'telephone'],
-          'address1': ['address 1', 'address', 'street', 'location'],
-          'zip_code': ['zip code', 'zip', 'postal code', 'pincode'],
-          'employee_size': ['employee size', 'employees', 'staff size', 'company size'],
-          'revenue_size': ['revenue size', 'revenue', 'turnover', 'annual revenue'],
-          'industry_type': ['industry type', 'industry', 'sector', 'domain'],
-          'city': ['city', 'town', 'location'],
-          'state': ['state', 'province', 'region'],
-          'country': ['country', 'nation'],
-          'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url']
+          'email': ['email', 'email address', 'e-mail', 'mail', 'contact email', 'email id'],
+          'job_title': ['job title', 'job', 'title', 'position', 'designation', 'role', 'occupation'],
+          'phone_no': ['phone no', 'phone', 'mobile', 'cell', 'contact number', 'telephone', 'phone number'],
+          'address1': ['address 1', 'address', 'street', 'location', 'address line 1'],
+          'zip_code': ['zip code', 'zip', 'postal code', 'pincode', 'postcode'],
+          'employee_size': ['employee size', 'employees', 'staff size', 'company size', 'no of employees'],
+          'revenue_size': ['revenue size', 'revenue', 'turnover', 'annual revenue', 'annual turnover'],
+          'industry_type': ['industry type', 'industry', 'sector', 'domain', 'vertical'],
+          'city': ['city', 'town', 'location', 'municipality'],
+          'state': ['state', 'province', 'region', 'district'],
+          'country': ['country', 'nation', 'region'],
+          'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url', 'url']
         };
 
         // Helper to safely get value by header name or aliases
         const getValue = (cols, fieldKey) => {
-          // 1. Try exact match from headerMap (normalized to lowercase)
           let index = headerMap[fieldKey.toLowerCase()];
 
-          // 2. If not found, try aliases
           if (index === undefined && COL_ALIASES[fieldKey]) {
             for (const alias of COL_ALIASES[fieldKey]) {
-              if (headerMap[alias]) {
+              if (headerMap[alias] !== undefined) {
                 index = headerMap[alias];
                 break;
               }
             }
           }
 
-          // 3. If still not found, try case-insensitive partial match for some keys (fragile but helpful)
           if (index === undefined) {
             const key = fieldKey.toLowerCase().replace(/_/g, ' ');
             index = headerMap[key];
@@ -1250,184 +1247,197 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         const normalizeDate = (dateStr) => {
           if (!dateStr) return new Date().toISOString().split('T')[0];
 
-          // Try to handle common formats manually first
-          const cleanDateStr = dateStr.trim();
+          let cleanDateStr = dateStr.toString().trim();
+
+          // Handle Excel serial dates
+          if (/^\d{5}(\.\d+)?$/.test(cleanDateStr)) {
+            const excelEpoch = new Date(1899, 11, 30);
+            const days = parseFloat(cleanDateStr);
+            const date = new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
+            if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
+          }
 
           // Format YYYY-MM-DD
-          if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDateStr)) return cleanDateStr;
+          if (/^\d{4}-\d{2}-\d{2}/.test(cleanDateStr)) return cleanDateStr.substring(0, 10);
+
+          // Remove time/timezone if present
+          cleanDateStr = cleanDateStr.split(' ')[0].split('T')[0];
 
           // Handle DD-MM-YYYY or MM-DD-YYYY or DD/MM/YYYY etc.
-          const parts = cleanDateStr.includes('/') ? cleanDateStr.split('/') :
-            cleanDateStr.includes('-') ? cleanDateStr.split('-') :
-              cleanDateStr.includes('.') ? cleanDateStr.split('.') : [];
+          const parts = cleanDateStr.split(/[./-]/);
 
           if (parts.length === 3) {
-            // Check if first part matches year (YYYY-MM-DD)
-            if (parts[0].length === 4) {
-              const y = parts[0];
-              const m = parts[1].padStart(2, '0');
-              const d = parts[2].padStart(2, '0');
-              return `${y}-${m}-${d}`;
-            }
-
-            // Check if last part matches year (DD-MM-YYYY or MM-DD-YYYY)
-            if (parts[2].length === 4) {
-              const y = parts[2];
+            let y, m, d;
+            if (parts[0].length === 4) { // YYYY-MM-DD
+              y = parts[0]; m = parts[1]; d = parts[2];
+            } else if (parts[2].length === 4 || parts[2].length === 2) {
+              y = parts[2].length === 2 ? (parseInt(parts[2]) > 50 ? '19' : '20') + parts[2] : parts[2];
               const p1 = parseInt(parts[0], 10);
               const p2 = parseInt(parts[1], 10);
 
-              // Ambiguous case: if p1 > 12, it must be day (DD-MM-YYYY)
-              if (p1 > 12) {
-                return `${y}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+              if (p1 > 12) { // DD-MM-YYYY
+                d = parts[0]; m = parts[1];
+              } else if (p2 > 12) { // MM-DD-YYYY
+                m = parts[0]; d = parts[1];
+              } else {
+                // Ambiguous, assume MM-DD-YYYY
+                m = parts[0]; d = parts[1];
               }
-              // If p2 > 12, p1 must be month (MM-DD-YYYY) -- e.g. 12/31/2026
-              if (p2 > 12) {
-                return `${y}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-              }
-              // Otherwise assume standard US format MM-DD-YYYY unless user context implies otherwise
-              // For safety, let's default to standard JS behavior or assume MM-DD-YYYY
-              return `${y}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
             }
+            if (y && m && d) return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
           }
 
-          // Fallback to JS Date parsing
-          const timestamp = Date.parse(cleanDateStr);
+          const timestamp = Date.parse(dateStr);
           if (!isNaN(timestamp)) {
             return new Date(timestamp).toISOString().split('T')[0];
           }
 
-          // Final fallback: return today's date if parsing fails completely, 
-          // to prevent DB error on import. Ideally we'd error out, but user UX 
-          // usually prefers skipping errors for minor fields or defaulting.
           return new Date().toISOString().split('T')[0];
         };
 
         let importedCount = 0;
         let skippedCount = 0;
         let missingCampaignCount = 0;
+        let internalDuplicateCount = 0;
         const newLeads = [];
+        const seenEmails = new Set();
 
         for (let i = 1; i < rows.length; i++) {
           const columns = rows[i];
           const companyName = getValue(columns, 'company_name');
+          const email = getValue(columns, 'email');
 
-          if (companyName) {
-            const rawCampaignName = selectedBulkCampaign || getValue(columns, 'Campaign');
-            let campaignName = null;
-            const customQuestionResponses = {};
-
-            if (rawCampaignName) {
-              // Case-insensitive lookup against existing campaigns
-              const campaignObj = campaigns.find(c =>
-                c.name.toLowerCase() === rawCampaignName.toLowerCase()
-              );
-
-              if (campaignObj) {
-                campaignName = campaignObj.name; // Use exact name from DB
-                if (campaignObj.custom_questions) {
-                  campaignObj.custom_questions.forEach(q => {
-                    const answer = getValue(columns, q.question);
-                    if (answer) customQuestionResponses[q.id] = answer;
-                  });
-                }
-              } else {
-                missingCampaignCount++;
-              }
-            }
-
-            newLeads.push({
-              date: normalizeDate(getValue(columns, 'Current Date') || getValue(columns, 'Date')),
-              ra_name: getValue(columns, 'RA Name') || employeeName,
-              employee_id: employeeId,
-              status: 'pending',
-              campaign: campaignName,
-              company_name: companyName,
-              salutation: getValue(columns, 'Salutation') || 'Mr.',
-              first_name: getValue(columns, 'first_name'),
-              last_name: getValue(columns, 'last_name'),
-              email: getValue(columns, 'email'),
-              domain: getValue(columns, 'Domain'),
-              job_title: getValue(columns, 'job_title'),
-              department: getValue(columns, 'Department') || 'Marketing',
-              job_level: getValue(columns, 'Job Level') || 'Mid-level',
-              job_title_link: getValue(columns, 'Job Title Link'),
-              phone_no: getValue(columns, 'phone_no'),
-              direct_dial: getValue(columns, 'Direct Dial'),
-              address1: getValue(columns, 'address1'),
-              city: getValue(columns, 'city'),
-              state: getValue(columns, 'state'),
-              zip_code: getValue(columns, 'zip_code'),
-              country: getValue(columns, 'country') || 'United States',
-              industry_type: getValue(columns, 'industry_type') || 'Technology',
-              industry_type_link: getValue(columns, 'Industry Type Link'),
-              employee_size: getValue(columns, 'employee_size') || '1-10',
-              associated_members: getValue(columns, 'Associated Members'),
-              employee_size_link: getValue(columns, 'Employee Size Link'),
-              revenue_size: getValue(columns, 'revenue_size'),
-              revenue_size_link: getValue(columns, 'Revenue Size Link'),
-              tenure: getValue(columns, 'Tenure'),
-              vv_status: getValue(columns, 'VV Status') || 'RPC Verified',
-              ra_comments: getValue(columns, 'RA Comments'),
-              custom_question_responses: customQuestionResponses
-            });
-            importedCount++;
-          } else {
+          if (!companyName) {
             skippedCount++;
+            continue;
           }
+
+          // Internal CSV Duplicate Check
+          if (email) {
+            if (seenEmails.has(email.toLowerCase())) {
+              internalDuplicateCount++;
+              continue;
+            }
+            seenEmails.add(email.toLowerCase());
+          }
+
+          const rawCampaignName = selectedBulkCampaign || getValue(columns, 'Campaign');
+          let campaignName = null;
+          const customQuestionResponses = {};
+
+          if (rawCampaignName) {
+            const campaignObj = campaigns.find(c =>
+              c.name.toLowerCase() === rawCampaignName.toLowerCase()
+            );
+
+            if (campaignObj) {
+              campaignName = campaignObj.name;
+              if (campaignObj.custom_questions) {
+                campaignObj.custom_questions.forEach(q => {
+                  const answer = getValue(columns, q.question);
+                  if (answer) customQuestionResponses[q.id] = answer;
+                });
+              }
+            } else {
+              missingCampaignCount++;
+            }
+          }
+
+          newLeads.push({
+            date: normalizeDate(getValue(columns, 'Current Date') || getValue(columns, 'Date')),
+            ra_name: getValue(columns, 'RA Name') || employeeName,
+            employee_id: employeeId,
+            status: 'pending',
+            campaign: campaignName,
+            company_name: companyName,
+            salutation: getValue(columns, 'Salutation') || 'Mr.',
+            first_name: getValue(columns, 'first_name'),
+            last_name: getValue(columns, 'last_name'),
+            email: email,
+            domain: getValue(columns, 'Domain'),
+            job_title: getValue(columns, 'job_title'),
+            department: getValue(columns, 'Department') || 'Marketing',
+            job_level: getValue(columns, 'Job Level') || 'Mid-level',
+            job_title_link: getValue(columns, 'Job Title Link'),
+            phone_no: getValue(columns, 'phone_no'),
+            direct_dial: getValue(columns, 'Direct Dial'),
+            address1: getValue(columns, 'address1'),
+            city: getValue(columns, 'city'),
+            state: getValue(columns, 'state'),
+            zip_code: getValue(columns, 'zip_code'),
+            country: getValue(columns, 'country') || 'United States',
+            industry_type: getValue(columns, 'industry_type') || 'Technology',
+            industry_type_link: getValue(columns, 'Industry Type Link'),
+            employee_size: getValue(columns, 'employee_size') || '1-10',
+            associated_members: getValue(columns, 'Associated Members'),
+            employee_size_link: getValue(columns, 'Employee Size Link'),
+            revenue_size: getValue(columns, 'revenue_size'),
+            revenue_size_link: getValue(columns, 'Revenue Size Link'),
+            tenure: getValue(columns, 'Tenure'),
+            vv_status: getValue(columns, 'VV Status') || 'RPC Verified',
+            ra_comments: getValue(columns, 'RA Comments'),
+            custom_question_responses: customQuestionResponses
+          });
         }
 
-        if (newLeads.length > 0) {
-          // Batch Duplicate Check
-          const emailsToCheck = newLeads.map(l => l.email).filter(Boolean);
-          if (emailsToCheck.length > 0) {
-            const { data: existingLeads } = await supabase
+        if (newLeads.length === 0) {
+          alert(`No valid leads found to import.\nRows skipped: ${skippedCount}\nInternal Duplicates: ${internalDuplicateCount}`);
+          return;
+        }
+
+        // Batch Duplicate Check against Database
+        const emailsToCheck = newLeads.map(l => l.email).filter(Boolean);
+        let finalLeads = [...newLeads];
+        let dbDuplicateCount = 0;
+
+        if (emailsToCheck.length > 0) {
+          // Supabase can handle large IN filters, but split if very large
+          const batchSize = 500;
+          const existingEmails = [];
+          for (let i = 0; i < emailsToCheck.length; i += batchSize) {
+            const batch = emailsToCheck.slice(i, i + batchSize);
+            const { data: dbLeads } = await supabase
               .from('leads')
-              .select('email, company_name')
-              .in('email', emailsToCheck);
+              .select('email')
+              .in('email', batch);
+            if (dbLeads) existingEmails.push(...dbLeads.map(l => l.email.toLowerCase()));
+          }
 
-            if (existingLeads && existingLeads.length > 0) {
-              const duplicateCount = existingLeads.length;
-              const duplicateEmails = existingLeads.map(l => l.email).join(', ');
-              if (!window.confirm(`${duplicateCount} leads already exist in the database with these emails: ${duplicateEmails.substring(0, 100)}${duplicateEmails.length > 100 ? '...' : ''}. \n\nDo you want to proceed and skip these duplicates?`)) {
-                return;
-              }
-              // Filter out duplicates if user confirmed to skip them
-              const finalLeads = newLeads.filter(nl => !existingLeads.find(el => el.email === nl.email));
-
-              if (finalLeads.length === 0) {
-                alert('All leads in the CSV are already present. No new leads were imported.');
-                onClose();
-                return;
-              }
-
-              const { error } = await supabase.from('leads').insert(finalLeads);
-              if (error) {
-                console.error('Insert error:', error);
-                alert('Error importing leads: ' + error.message);
-                return;
-              }
-              importedCount = finalLeads.length;
-            } else {
-              const { error } = await supabase.from('leads').insert(newLeads);
-              if (error) {
-                console.error('Insert error:', error);
-                alert('Error importing leads: ' + error.message);
-                return;
-              }
-            }
-          } else {
-            const { error } = await supabase.from('leads').insert(newLeads);
-            if (error) {
-              console.error('Insert error:', error);
-              alert('Error importing leads: ' + error.message);
+          if (existingEmails.length > 0) {
+            dbDuplicateCount = existingEmails.length;
+            if (!window.confirm(`${dbDuplicateCount} leads already exist in the database. \n\nDo you want to skip these duplicates and import the remaining ${newLeads.length - dbDuplicateCount} leads?`)) {
               return;
             }
+            finalLeads = newLeads.filter(nl => !nl.email || !existingEmails.includes(nl.email.toLowerCase()));
           }
         }
 
-        let message = `Successfully uploaded ${importedCount} leads.`;
-        if (skippedCount > 0) message += `\nSkipped ${skippedCount} rows due to missing Company Name.`;
-        if (missingCampaignCount > 0) message += `\nWarning: ${missingCampaignCount} rows had campaign names that don't exist and were set to 'None'.`;
+        if (finalLeads.length === 0) {
+          alert('All leads in the CSV are already present in the database.');
+          onClose();
+          return;
+        }
+
+        // Final Insert in batches to prevent payload size errors
+        const insertBatchSize = 100;
+        let successCount = 0;
+        for (let i = 0; i < finalLeads.length; i += insertBatchSize) {
+          const batch = finalLeads.slice(i, i + insertBatchSize);
+          const { error } = await supabase.from('leads').insert(batch);
+          if (error) {
+            console.error('Insert error at batch:', i, error);
+            alert(`Error during upload at row ${i + 1}: ${error.message}`);
+            // Decision: Stop or continue? Let's stop to be safe.
+            return;
+          }
+          successCount += batch.length;
+        }
+
+        let message = `Upload Complete!\n\n- Successfully imported: ${successCount} leads`;
+        if (dbDuplicateCount > 0) message += `\n- Skipped (Database Duplicates): ${dbDuplicateCount}`;
+        if (internalDuplicateCount > 0) message += `\n- Skipped (Internal CSV Duplicates): ${internalDuplicateCount}`;
+        if (skippedCount > 0) message += `\n- Skipped (Missing Company Name): ${skippedCount}`;
+        if (missingCampaignCount > 0) message += `\n- Warning: ${missingCampaignCount} rows had unknown campaigns.`;
 
         alert(message);
         onSuccess();
