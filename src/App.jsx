@@ -1249,7 +1249,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         const headers = rawHeaders.map(h => h.trim().toLowerCase());
 
         const headerMap = headers.reduce((acc, curr, index) => {
-          if (curr) acc[curr] = index;
+          if (curr) acc[curr.toLowerCase().trim()] = index;
           return acc;
         }, {});
 
