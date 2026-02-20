@@ -2383,7 +2383,12 @@ const QADashboard = () => {
                 value={filters.agent}
                 onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
                 placeholder="Select agent..."
-                options={[...new Set(leads.map(l => l.ra_name).filter(Boolean))].sort().map(name => ({ value: name, label: name }))}
+                options={[...new Set(leads.map(l => l.ra_name).filter(name =>
+                  name &&
+                  name.length < 40 &&
+                  !name.includes(',') &&
+                  !name.includes('://')
+                ))].sort().map(name => ({ value: name, label: name }))}
               />
               <SearchableSelect
                 label="Campaign Name"
@@ -3377,7 +3382,12 @@ const AdminDashboard = () => {
                 value={filters.agent}
                 onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
                 placeholder="Select agent..."
-                options={[...new Set(leads.map(l => l.ra_name).filter(Boolean))].sort().map(name => ({ value: name, label: name }))}
+                options={[...new Set(leads.map(l => l.ra_name).filter(name =>
+                  name &&
+                  name.length < 40 &&
+                  !name.includes(',') &&
+                  !name.includes('://')
+                ))].sort().map(name => ({ value: name, label: name }))}
               />
               <SearchableSelect
                 label="Campaign Name"
