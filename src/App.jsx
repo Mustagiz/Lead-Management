@@ -1493,18 +1493,20 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           if (existing) {
             dbDuplicateCount++;
             if (nl.id || updateExistingLeads) {
+              // For updates, OMIT employee_id and ra_name to avoid RLS change violations.
+              // Omit them from the object so Supabase preserves existing values.
+              const { employee_id, ra_name, id, ...updateData } = nl;
               finalLeads.push({
-                ...nl,
-                id: nl.id || existing.id,
-                employee_id: existing.employee_id, // Preserve owner
-                ra_name: existing.ra_name // Preserve owner name
+                ...updateData,
+                id: existing.id
               });
             } else {
               leadsToSkip.push(nl);
             }
           } else {
-            // New record
-            finalLeads.push(nl);
+            // New record - OMIT id if present to allow DB to generate a fresh UUID.
+            const { id, ...insertData } = nl;
+            finalLeads.push(insertData);
           }
         }
 
