@@ -1419,13 +1419,15 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           return;
         }
 
-        // Batch Duplicate Check against Database
-        const emailsToCheck = newLeads.map(l => l.email).filter(Boolean);
-        let finalLeads = [...newLeads];
+        // Batch Duplicate Check against Database (Only for NEW leads without IDs)
+        const leadsPendingInsert = newLeads.filter(l => !l.id);
+        const leadsPendingUpsert = newLeads.filter(l => l.id);
+
+        const emailsToCheck = leadsPendingInsert.map(l => l.email).filter(Boolean);
+        let finalLeadsToInsert = [...leadsPendingInsert];
         let dbDuplicateCount = 0;
 
         if (emailsToCheck.length > 0) {
-          // Supabase can handle large IN filters, but split if very large
           const batchSize = 500;
           const existingEmails = [];
           for (let i = 0; i < emailsToCheck.length; i += batchSize) {
@@ -1439,15 +1441,17 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
           if (existingEmails.length > 0) {
             dbDuplicateCount = existingEmails.length;
-            if (!window.confirm(`${dbDuplicateCount} leads already exist in the database. \n\nDo you want to skip these duplicates and import the remaining ${newLeads.length - dbDuplicateCount} leads?`)) {
+            if (!window.confirm(`${dbDuplicateCount} NEW leads already exist in the database (by email). \n\nDo you want to skip these duplicates and import the remaining ${leadsPendingInsert.length - dbDuplicateCount} new leads?`)) {
               return;
             }
-            finalLeads = newLeads.filter(nl => !nl.email || !existingEmails.includes(nl.email.toLowerCase()));
+            finalLeadsToInsert = leadsPendingInsert.filter(nl => !nl.email || !existingEmails.includes(nl.email.toLowerCase()));
           }
         }
 
+        const finalLeads = [...leadsPendingUpsert, ...finalLeadsToInsert];
+
         if (finalLeads.length === 0) {
-          alert('All leads in the CSV are already present in the database.');
+          alert('No leads to process after duplicate check.');
           onClose();
           return;
         }
