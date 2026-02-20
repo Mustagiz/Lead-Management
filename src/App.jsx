@@ -180,7 +180,7 @@ const formatDisplayDate = (dateStr) => {
   // Pattern: YYYY-MM-DD (ISO)
   const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
-    const [_, y, m, d] = isoMatch;
+    const [, y, m, d] = isoMatch;
     return `${d}/${m}/${y}`;
   }
 
