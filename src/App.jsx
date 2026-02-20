@@ -1015,7 +1015,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   const [campaigns, setCampaigns] = useState([]);
   const [uploadResult, setUploadResult] = useState(null);
   const [updateExistingLeads, setUpdateExistingLeads] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const departments = ['HR', 'Finance', 'Marketing', 'Sales', 'IT', 'Operations', 'R&D', 'Customer Service', 'Legal', 'Supply Chain', 'Logistics', 'Administration', 'QA/QC', 'Engineering', 'Security', 'PMO', 'Corporate Strategy', 'PR', 'Facilities Management', 'Data Analytics'];
 
