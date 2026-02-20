@@ -1369,11 +1369,13 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             }
           }
 
-          newLeads.push({
+          const leadId = getValue(columns, 'id');
+
+          const leadData = {
             date: normalizeDate(getValue(columns, 'Current Date') || getValue(columns, 'Date')),
             ra_name: getValue(columns, 'RA Name') || employeeName,
             employee_id: employeeId,
-            status: 'pending',
+            status: getValue(columns, 'Status') || 'pending',
             campaign: campaignName,
             company_name: companyName,
             salutation: getValue(columns, 'Salutation') || 'Mr.',
@@ -1403,7 +1405,13 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             vv_status: getValue(columns, 'VV Status') || 'RPC Verified',
             ra_comments: getValue(columns, 'RA Comments'),
             custom_question_responses: customQuestionResponses
-          });
+          };
+
+          if (leadId) {
+            leadData.id = leadId;
+          }
+
+          newLeads.push(leadData);
         }
 
         if (newLeads.length === 0) {
@@ -1444,16 +1452,33 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           return;
         }
 
-        // Final Insert in batches to prevent payload size errors
+        // Final Insert/Upsert in batches
         const insertBatchSize = 100;
         let successCount = 0;
-        for (let i = 0; i < finalLeads.length; i += insertBatchSize) {
-          const batch = finalLeads.slice(i, i + insertBatchSize);
+
+        // Divide into updates (with ID) and inserts (without ID)
+        const leadsToUpsert = finalLeads.filter(l => l.id);
+        const leadsToInsert = finalLeads.filter(l => !l.id);
+
+        // Process Upserts
+        for (let i = 0; i < leadsToUpsert.length; i += insertBatchSize) {
+          const batch = leadsToUpsert.slice(i, i + insertBatchSize);
+          const { error } = await supabase.from('leads').upsert(batch);
+          if (error) {
+            console.error('Upsert error at batch:', i, error);
+            alert(`Error updating records at row ${i + 1}: ${error.message}`);
+            return;
+          }
+          successCount += batch.length;
+        }
+
+        // Process Inserts
+        for (let i = 0; i < leadsToInsert.length; i += insertBatchSize) {
+          const batch = leadsToInsert.slice(i, i + insertBatchSize);
           const { error } = await supabase.from('leads').insert(batch);
           if (error) {
             console.error('Insert error at batch:', i, error);
-            alert(`Error during upload at row ${i + 1}: ${error.message}`);
-            // Decision: Stop or continue? Let's stop to be safe.
+            alert(`Error inserting records at row ${i + 1}: ${error.message}`);
             return;
           }
           successCount += batch.length;
@@ -1892,6 +1917,7 @@ const QADashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [activeTab, setActiveTab] = useState('leads');
+  const [editingLead, setEditingLead] = useState(null);
 
   // Break Management State
   const [onBreak, setOnBreak] = useState(false);
@@ -2112,7 +2138,7 @@ const QADashboard = () => {
 
   const downloadLeads = () => {
     const headers = [
-      'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
+      'id', 'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
       'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link',
       'Phone', 'Direct Dial', 'Address', 'City', 'State', 'Zip', 'Country',
       'Industry', 'Industry Link', 'Employee Size', 'Associated Members', 'Employee Size Link',
@@ -2120,6 +2146,7 @@ const QADashboard = () => {
     ];
 
     const rows = filteredLeads.map(lead => [
+      lead.id,
       lead.date,
       lead.ra_name,
       lead.campaign || '',
@@ -2388,6 +2415,16 @@ const QADashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex gap-2">
                           <button
+                            onClick={() => {
+                              setEditingLead(lead);
+                              setShowUploadModal(true);
+                            }}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit lead"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
                             onClick={() => handleQualify(lead.id, 'qualified')}
                             className="text-green-600 hover:text-green-700"
                             title="Qualify lead"
@@ -2437,11 +2474,15 @@ const QADashboard = () => {
 
           {showUploadModal && (
             <UploadLeadModal
-              onClose={() => setShowUploadModal(false)}
+              onClose={() => {
+                setShowUploadModal(false);
+                setEditingLead(null);
+              }}
               onSuccess={() => {
                 loadLeads();
               }}
               activeCampaigns={activeCampaigns}
+              leadToEdit={editingLead}
             />
           )}
 
@@ -2916,7 +2957,7 @@ const AdminDashboard = () => {
     }
 
     const headers = [
-      'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
+      'id', 'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
       'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link',
       'Phone', 'Direct Dial', 'Address', 'City', 'State', 'Zip', 'Country',
       'Industry', 'Industry Link', 'Employee Size', 'Associated Members', 'Employee Size Link',
