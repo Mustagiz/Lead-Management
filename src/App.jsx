@@ -1534,14 +1534,17 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         const leadsToUpsert = finalLeads.filter(l => l.id);
         const leadsToInsert = finalLeads.filter(l => !l.id);
 
-        // Process Updates via direct upsert (RLS now allows Admin/QA to update any lead)
+        // Process Updates via explicit .update() per record
         for (let i = 0; i < leadsToUpsert.length; i += insertBatchSize) {
           const batch = leadsToUpsert.slice(i, i + insertBatchSize);
-          const { error } = await supabase.from('leads').upsert(batch, { onConflict: 'id' });
-          if (error) {
-            console.error('Upsert error at batch:', i, error);
-            alert(`Error updating records at row ${i + 1}: ${error.message}`);
-            return;
+          for (const record of batch) {
+            const { id, ...updateFields } = record;
+            const { error } = await supabase.from('leads').update(updateFields).eq('id', id);
+            if (error) {
+              console.error('Update error for lead', id, error);
+              alert(`Error updating lead (id: ${id}): ${error.message}`);
+              return;
+            }
           }
           successCount += batch.length;
         }
