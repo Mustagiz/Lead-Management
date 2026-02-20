@@ -1295,7 +1295,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           return new Date().toISOString().split('T')[0];
         };
 
-        let importedCount = 0;
         let skippedCount = 0;
         let missingCampaignCount = 0;
         let internalDuplicateCount = 0;
