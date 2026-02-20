@@ -1461,29 +1461,34 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         if (emailsToCheck.length > 0) {
           const batchSize = 500;
-          const existingEmailMap = {}; // { email: id }
+          const existingLeadInfoMap = {}; // { email: { id, employee_id } }
           for (let i = 0; i < emailsToCheck.length; i += batchSize) {
             const batch = emailsToCheck.slice(i, i + batchSize);
             const { data: dbLeads } = await supabase
               .from('leads')
-              .select('id, email')
+              .select('id, email, employee_id')
               .in('email', batch);
             if (dbLeads) {
               dbLeads.forEach(l => {
-                existingEmailMap[l.email.toLowerCase()] = l.id;
+                existingLeadInfoMap[l.email.toLowerCase()] = { id: l.id, employee_id: l.employee_id };
               });
             }
           }
 
-          const existingEmails = Object.keys(existingEmailMap);
+          const existingEmails = Object.keys(existingLeadInfoMap);
           if (existingEmails.length > 0) {
             dbDuplicateCount = existingEmails.length;
 
             if (updateExistingLeads) {
-              // Map existing IDs to the newLeads
+              // Map existing IDs and PRESERVE original employee_id to avoid RLS violation
               finalLeadsToInsert = leadsPendingInsert.map(nl => {
-                if (nl.email && existingEmailMap[nl.email.toLowerCase()]) {
-                  return { ...nl, id: existingEmailMap[nl.email.toLowerCase()] };
+                const existing = nl.email ? existingLeadInfoMap[nl.email.toLowerCase()] : null;
+                if (existing) {
+                  return {
+                    ...nl,
+                    id: existing.id,
+                    employee_id: existing.employee_id
+                  };
                 }
                 return nl;
               });
@@ -1491,7 +1496,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
               if (!window.confirm(`${dbDuplicateCount} NEW leads already exist in the database (by email). \n\nDo you want to skip these duplicates and import the remaining ${leadsPendingInsert.length - dbDuplicateCount} new leads?`)) {
                 return;
               }
-              finalLeadsToInsert = leadsPendingInsert.filter(nl => !nl.email || !existingEmailMap[nl.email.toLowerCase()]);
+              finalLeadsToInsert = leadsPendingInsert.filter(nl => !nl.email || !existingLeadInfoMap[nl.email.toLowerCase()]);
             }
           }
         }
@@ -2548,6 +2553,8 @@ const QADashboard = () => {
               onSuccess={() => {
                 loadLeads();
               }}
+              employeeId={currentUser.id}
+              employeeName={currentUser.name}
               activeCampaigns={activeCampaigns}
               leadToEdit={editingLead}
             />
@@ -3525,8 +3532,8 @@ const AdminDashboard = () => {
               <UploadLeadModal
                 onClose={() => setShowUploadModal(false)}
                 onSuccess={loadData}
-                employeeId={'admin'}
-                employeeName={'Admin'}
+                employeeId={currentUser.id}
+                employeeName={currentUser.name}
               />
             )
           }
