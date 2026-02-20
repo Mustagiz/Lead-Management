@@ -420,7 +420,8 @@ const EmployeeDashboard = () => {
     const { data: userLeads, error } = await supabase
       .from('leads')
       .select('*')
-      .eq('employee_id', currentUser.id);
+      .eq('employee_id', currentUser.id)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading leads:', error);
@@ -1568,8 +1569,9 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           skippedCount,
           missingCampaignCount
         });
-        onSuccess();
-        onClose();
+        onSuccess(); // We still call onSuccess to refresh the background data
+        // We remove onClose() so the success summary state (uploadResult) remains visible
+
       };
 
       processRows();
@@ -2038,7 +2040,8 @@ const QADashboard = () => {
   const loadLeads = async () => {
     const { data: leadsData, error: leadsError } = await supabase
       .from('leads')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (!leadsError) {
       setLeads(leadsData);
@@ -2855,7 +2858,7 @@ const AdminDashboard = () => {
 
 
   const loadData = async () => {
-    const { data: leadsData } = await supabase.from('leads').select('*');
+    const { data: leadsData } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
     const { data: usersData } = await supabase.from('profiles').select('*');
     const { data: campaignsData } = await supabase.from('campaigns').select('*');
 
