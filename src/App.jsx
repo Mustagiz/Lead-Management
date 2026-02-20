@@ -172,6 +172,21 @@ const AuthProvider = ({ children }) => {
   );
 };
 
+// Helper to format date for display (DD/MM/YYYY)
+const formatDisplayDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 // Reusable Components
 const Button = ({ children, variant = 'primary', onClick, disabled, className = '', type = 'button' }) => {
   const baseStyles = 'px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-sm';
@@ -784,7 +799,7 @@ const EmployeeDashboard = () => {
                 <tbody className="divide-y divide-gray-200">
                   {paginatedLeads.map((lead, index) => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDisplayDate(lead.date)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {lead.salutation} {lead.first_name} {lead.last_name}
@@ -2151,7 +2166,7 @@ const QADashboard = () => {
 
     const rows = filteredLeads.map(lead => [
       lead.id,
-      lead.date,
+      formatDisplayDate(lead.date),
       lead.ra_name,
       lead.campaign || '',
       lead.company_name,
@@ -2401,7 +2416,7 @@ const QADashboard = () => {
                           }}
                         />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDisplayDate(lead.date)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -2628,7 +2643,7 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">{user.name}'s Break History</h2>
-              <p className="text-sm text-gray-500">Today: {today}</p>
+              <p className="text-sm text-gray-500">Today: {formatDisplayDate(today)}</p>
             </div>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <X className="w-6 h-6" />
@@ -2985,7 +3000,8 @@ const AdminDashboard = () => {
       }
 
       return [
-        lead.date,
+        lead.id,
+        formatDisplayDate(lead.date),
         lead.ra_name,
         lead.campaign || '',
         lead.company_name,
@@ -3377,7 +3393,7 @@ const AdminDashboard = () => {
                             onChange={() => handleSelectLead(lead.id)}
                           />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDisplayDate(lead.date)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.ra_name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lead.company_name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
