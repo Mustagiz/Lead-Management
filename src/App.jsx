@@ -1232,6 +1232,10 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
       alert('Please select a CSV file');
       return;
     }
+    if (!selectedBulkCampaign) {
+      alert('Please select a campaign for bulk upload');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -1377,7 +1381,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           }
 
           const rawCampaignName = selectedBulkCampaign || getValue(columns, 'Campaign');
-          let campaignName = null;
+          let campaignName = '';
           const customQuestionResponses = {};
 
           if (rawCampaignName) {
@@ -1428,7 +1432,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             leadData.status = 'pending';
           }
 
-          setField('campaign', 'campaign', campaignName);
+          setField('campaign', 'campaign', campaignName || '');
           setField('company_name', 'company_name');
           setField('salutation', 'salutation', 'Mr.');
           setField('first_name', 'first_name');
@@ -1928,18 +1932,18 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 <form onSubmit={handleBulkUpload} className="animate-in fade-in duration-500">
                   <div className="mb-8">
                     <Select
-                      label="Select Campaign for these Leads"
+                      label="Select Campaign for these Leads *"
                       value={selectedBulkCampaign}
                       onChange={(e) => setSelectedBulkCampaign(e.target.value)}
                       options={[
-                        { value: '', label: '-- Use Campaign Names from CSV --' },
+                        { value: '', label: '-- Select Campaign (Required) --' },
                         ...campaigns.map(c => ({ value: c.name, label: c.name }))
                       ]}
                     />
                     <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-indigo-50/50 rounded-lg">
                       <AlertCircle className="w-4 h-4 text-indigo-600" />
                       <p className="text-xs text-indigo-700 font-medium">
-                        If selected, this will apply to ALL leads in the CSV.
+                        This campaign will apply to ALL leads in the CSV.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-amber-50/50 rounded-lg border border-amber-100 italic">
