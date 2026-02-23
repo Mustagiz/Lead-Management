@@ -1415,7 +1415,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           };
 
           // Conditionally build leadData based on columns present in CSV
-          setField('date', 'date', normalizeDate(getValue(columns, 'current date')));
+          const rawDate = getValue(columns, 'date') || getValue(columns, 'current date');
+          leadData.date = normalizeDate(rawDate);
           setField('ra_name', 'ra name', employeeName);
           setField('employee_id', 'employee_id', employeeId);
 
