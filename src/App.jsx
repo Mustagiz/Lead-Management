@@ -1324,28 +1324,23 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           // Remove time/timezone if present
           cleanDateStr = cleanDateStr.split(' ')[0].split('T')[0];
 
-          // Handle DD-MM-YYYY or MM-DD-YYYY or DD/MM/YYYY etc.
+          // Handle DD/MM/YYYY or DD-MM-YYYY format (user's format)
           const parts = cleanDateStr.split(/[./-]/);
 
           if (parts.length === 3) {
             let y, m, d;
-            if (parts[0].length === 4) { // YYYY-MM-DD
+            if (parts[0].length === 4) { // YYYY-MM-DD or YYYY/MM/DD
               y = parts[0]; m = parts[1]; d = parts[2];
-            } else if (parts[2].length === 4 || parts[2].length === 2) {
-              y = parts[2].length === 2 ? (parseInt(parts[2]) > 50 ? '19' : '20') + parts[2] : parts[2];
-              const p1 = parseInt(parts[0], 10);
-              const p2 = parseInt(parts[1], 10);
-
-              if (p1 > 12) { // DD-MM-YYYY
-                d = parts[0]; m = parts[1];
-              } else if (p2 > 12) { // MM-DD-YYYY
-                m = parts[0]; d = parts[1];
-              } else {
-                // Ambiguous, assume DD-MM-YYYY as per user preference
-                d = parts[0]; m = parts[1];
-              }
+            } else if (parts[2].length === 4) { // DD/MM/YYYY or DD-MM-YYYY
+              d = parts[0].padStart(2, '0');
+              m = parts[1].padStart(2, '0');
+              y = parts[2];
+            } else if (parts[2].length === 2) { // DD/MM/YY or DD-MM-YY
+              d = parts[0].padStart(2, '0');
+              m = parts[1].padStart(2, '0');
+              y = (parseInt(parts[2]) > 50 ? '19' : '20') + parts[2];
             }
-            if (y && m && d) return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+            if (y && m && d) return `${y}-${m}-${d}`;
           }
 
           const timestamp = Date.parse(dateStr);
