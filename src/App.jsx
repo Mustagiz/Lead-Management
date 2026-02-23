@@ -976,6 +976,7 @@ const EmployeeDashboard = () => {
 
 // Upload Lead Modal Component - Enhanced for Edit
 const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToEdit }) => {
+  const { currentUser } = useAuth();
   const [uploadType, setUploadType] = useState('single');
   const [formData, setFormData] = useState(
     leadToEdit ? { ...leadToEdit } : {
@@ -1946,19 +1947,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         This campaign will apply to ALL leads in the CSV.
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-amber-50/50 rounded-lg border border-amber-100 italic">
-                      <input
-                        type="checkbox"
-                        id="update-existing"
-                        checked={updateExistingLeads}
-                        onChange={(e) => setUpdateExistingLeads(e.target.checked)}
-                        className="w-4 h-4 text-amber-600 focus:ring-amber-500 border-amber-300 rounded"
-                      />
-                      <label htmlFor="update-existing" className="text-xs font-bold text-amber-800 cursor-pointer">
-                        Update existing leads (match by email)
-                      </label>
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 ml-auto" />
-                    </div>
+                    {(currentUser?.role === 'qa' || currentUser?.role === 'admin') && (
+                      <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-amber-50/50 rounded-lg border border-amber-100 italic">
+                        <input
+                          type="checkbox"
+                          id="update-existing"
+                          checked={updateExistingLeads}
+                          onChange={(e) => setUpdateExistingLeads(e.target.checked)}
+                          className="w-4 h-4 text-amber-600 focus:ring-amber-500 border-amber-300 rounded"
+                        />
+                        <label htmlFor="update-existing" className="text-xs font-bold text-amber-800 cursor-pointer">
+                          Update existing leads (match by email)
+                        </label>
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 ml-auto" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="group relative border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center transition-all hover:border-indigo-300 hover:bg-gray-50/50 cursor-pointer">
