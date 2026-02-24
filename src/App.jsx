@@ -2934,7 +2934,28 @@ const AdminDashboard = () => {
 
 
   const loadData = async () => {
-    const { data: leadsData } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+    // Fetch all leads (Supabase default limit is 1000, so we need to fetch all)
+    let allLeads = [];
+    let from = 0;
+    const batchSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data: batch } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + batchSize - 1);
+      
+      if (batch && batch.length > 0) {
+        allLeads = [...allLeads, ...batch];
+        from += batchSize;
+        hasMore = batch.length === batchSize;
+      } else {
+        hasMore = false;
+      }
+    }
+
     const { data: usersData } = await supabase.from('profiles').select('*');
     const { data: campaignsData } = await supabase.from('campaigns').select('*');
 
@@ -2944,17 +2965,17 @@ const AdminDashboard = () => {
       .select('*')
       .eq('date', today);
 
-    setLeads(leadsData || []);
-    setFilteredLeads(leadsData || []);
+    setLeads(allLeads);
+    setFilteredLeads(allLeads);
     setUsers(usersData || []);
     setCampaigns(campaignsData || []);
     setAllBreaks(breaksData || []);
 
     setStats({
-      totalLeads: (leadsData || []).length,
+      totalLeads: allLeads.length,
       totalUsers: (usersData || []).length,
-      qualified: (leadsData || []).filter(l => l.status === 'qualified').length,
-      disqualified: (leadsData || []).filter(l => l.status === 'disqualified').length,
+      qualified: allLeads.filter(l => l.status === 'qualified').length,
+      disqualified: allLeads.filter(l => l.status === 'disqualified').length,
       employees: (usersData || []).filter(u => u.role === 'employee').length,
       qaUsers: (usersData || []).filter(u => u.role === 'qa').length,
       totalCampaigns: (campaignsData || []).length,
