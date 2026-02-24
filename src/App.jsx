@@ -507,6 +507,7 @@ const EmployeeDashboard = () => {
       }
 
       return [
+        lead.id,
         formatDisplayDate(lead.date),
         lead.ra_name,
         lead.campaign || '',
@@ -2290,6 +2291,7 @@ const QADashboard = () => {
     ];
 
     const rows = filteredLeads.map(lead => [
+      lead.id,
       formatDisplayDate(lead.date),
       lead.ra_name,
       lead.campaign || '',
