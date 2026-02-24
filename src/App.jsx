@@ -3890,142 +3890,96 @@ const AdminDashboard = () => {
       {/* Reports Tab */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
-          {campaigns.length === 0 ? (
-            <Card className="p-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">No Campaigns Available</h3>
-              <p className="text-gray-500">Create campaigns to view performance reports.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="p-6 h-[500px]">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
+                Campaign Conversion Rates (%)
+              </h3>
+              <ResponsiveContainer width="100%" height="80%">
+                <BarChart
+                  data={campaigns.map(c => {
+                    const cLeads = leads.filter(l => l.campaign === c.name);
+                    const qualified = cLeads.filter(l => l.status === 'qualified').length;
+                    return {
+                      name: c.name,
+                      rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
+                    };
+                  })}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`${value}%`, 'Conversion Rate']} />
+                  <Bar dataKey="rate" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </Card>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="p-6 h-[500px]">
-                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                    <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
-                    Campaign Conversion Rates (%)
-                  </h3>
-                  {campaigns.filter(c => leads.some(l => l.campaign === c.name)).length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <p className="text-gray-500">No leads data available for campaigns</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="80%">
-                      <BarChart
-                        data={campaigns
-                          .filter(c => leads.some(l => l.campaign === c.name))
-                          .map(c => {
-                            const cLeads = leads.filter(l => l.campaign === c.name);
-                            const qualified = cLeads.filter(l => l.status === 'qualified').length;
-                            return {
-                              name: c.name,
-                              rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
-                            };
-                          })}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
-                        <YAxis />
-                        <Tooltip
-                          formatter={(value) => [`${value}%`, 'Conversion Rate']}
-                        />
-                        <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
-                          {campaigns.filter(c => leads.some(l => l.campaign === c.name)).map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </Card>
 
-                <Card className="p-6 h-[500px]">
-                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                    <Users className="w-5 h-5 mr-2 text-indigo-600" />
-                    Leads Volume by Campaign
-                  </h3>
-                  {campaigns.filter(c => leads.some(l => l.campaign === c.name)).length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <p className="text-gray-500">No leads data available for campaigns</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="80%">
-                      <BarChart
-                        data={campaigns
-                          .filter(c => leads.some(l => l.campaign === c.name))
-                          .map(c => ({
-                            name: c.name,
-                            total: leads.filter(l => l.campaign === c.name).length
-                          }))}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </Card>
-              </div>
+            <Card className="p-6 h-[500px]">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-indigo-600" />
+                Leads Volume by Campaign
+              </h3>
+              <ResponsiveContainer width="100%" height="80%">
+                <BarChart
+                  data={campaigns.map(c => ({
+                    name: c.name,
+                    total: leads.filter(l => l.campaign === c.name).length
+                  }))}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
 
-              <Card className="p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Detailed Performance Stats</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50 text-left">
-                        <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Campaign</th>
-                        <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Total Leads</th>
-                        <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Qualified</th>
-                        <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Disqualified</th>
-                        <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Conversion %</th>
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Detailed Performance Stats</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Campaign</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Total Leads</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Qualified</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Disqualified</th>
+                    <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Conversion %</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {campaigns.map(c => {
+                    const cLeads = leads.filter(l => l.campaign === c.name);
+                    const qCount = cLeads.filter(l => l.status === 'qualified').length;
+                    const dCount = cLeads.filter(l => l.status === 'disqualified').length;
+                    const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
+                    return (
+                      <tr key={c.id}>
+                        <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
+                        <td className="px-6 py-4 text-gray-600">{cLeads.length}</td>
+                        <td className="px-6 py-4 text-green-600 font-semibold">{qCount}</td>
+                        <td className="px-6 py-4 text-red-600">{dCount}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-gray-100 rounded-full h-2">
+                              <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${rate}%` }}></div>
+                            </div>
+                            <span className="text-sm font-bold">{rate}%</span>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {campaigns.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                            No campaigns available
-                          </td>
-                        </tr>
-                      ) : (
-                        campaigns.map(c => {
-                          const cLeads = leads.filter(l => l.campaign === c.name);
-                          const qCount = cLeads.filter(l => l.status === 'qualified').length;
-                          const dCount = cLeads.filter(l => l.status === 'disqualified').length;
-                          const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
-                          return (
-                            <tr key={c.id}>
-                              <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
-                              <td className="px-6 py-4 text-gray-600">{cLeads.length}</td>
-                              <td className="px-6 py-4 text-green-600 font-semibold">{qCount}</td>
-                              <td className="px-6 py-4 text-red-600">{dCount}</td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-24 bg-gray-100 rounded-full h-2">
-                                    <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${rate}%` }}></div>
-                                  </div>
-                                  <span className="text-sm font-bold">{rate}%</span>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </>
-          )}
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
       )}
 
