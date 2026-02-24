@@ -3182,6 +3182,7 @@ const AdminDashboard = () => {
       }
 
       return [
+        lead.id,
         formatDisplayDate(lead.date),
         lead.ra_name,
         lead.campaign || '',
