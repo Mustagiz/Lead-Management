@@ -2888,6 +2888,8 @@ const AdminDashboard = () => {
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [bulkEditForm, setBulkEditForm] = useState({ status: '', campaign: '' });
   const [allBreaks, setAllBreaks] = useState([]);
+  const [campaignPage, setCampaignPage] = useState(1);
+  const CAMPAIGNS_PER_PAGE = 10;
 
   const formatTime = (ts) => {
     const h = Math.floor(ts / 3600);
@@ -4126,7 +4128,7 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {campaigns.map(campaign => (
+                    {campaigns.slice((campaignPage - 1) * CAMPAIGNS_PER_PAGE, campaignPage * CAMPAIGNS_PER_PAGE).map(campaign => (
                       <tr key={campaign.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{campaign.name}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{campaign.description}</td>
@@ -4173,6 +4175,31 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {Math.ceil(campaigns.length / CAMPAIGNS_PER_PAGE) > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing {((campaignPage - 1) * CAMPAIGNS_PER_PAGE) + 1} to {Math.min(campaignPage * CAMPAIGNS_PER_PAGE, campaigns.length)} of {campaigns.length} campaigns
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCampaignPage(p => Math.max(1, p - 1))}
+                      disabled={campaignPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCampaignPage(p => Math.min(Math.ceil(campaigns.length / CAMPAIGNS_PER_PAGE), p + 1))}
+                      disabled={campaignPage === Math.ceil(campaigns.length / CAMPAIGNS_PER_PAGE)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {showCampaignModal && (
