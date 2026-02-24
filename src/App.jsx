@@ -2880,7 +2880,8 @@ const AdminDashboard = () => {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [breakFilters, setBreakFilters] = useState({
     startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    endDate: new Date().toISOString().split('T')[0],
+    agentName: ''
   });
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [showBulkDeleteLeadsConfirm, setShowBulkDeleteLeadsConfirm] = useState(false);
@@ -3253,12 +3254,15 @@ const AdminDashboard = () => {
       });
 
       const csvContent = rows.map(r => r.join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `break_report_${breakFilters.startDate}_to_${breakFilters.endDate}.csv`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error downloading break report:', err);
       alert('Failed to generate report: ' + err.message);
@@ -3996,30 +4000,35 @@ const AdminDashboard = () => {
             </div>
 
             <div className="p-6 bg-white border-b border-gray-200">
-              <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1">
-                  <Input
-                    label="Start Date"
-                    type="date"
-                    value={breakFilters.startDate}
-                    onChange={(e) => setBreakFilters({ ...breakFilters, startDate: e.target.value })}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Input
+                  label="Start Date"
+                  type="date"
+                  value={breakFilters.startDate}
+                  onChange={(e) => setBreakFilters({ ...breakFilters, startDate: e.target.value })}
+                />
+                <Input
+                  label="End Date"
+                  type="date"
+                  value={breakFilters.endDate}
+                  onChange={(e) => setBreakFilters({ ...breakFilters, endDate: e.target.value })}
+                />
+                <SearchableSelect
+                  label="Agent Name"
+                  value={breakFilters.agentName}
+                  onChange={(e) => setBreakFilters({ ...breakFilters, agentName: e.target.value })}
+                  placeholder="Select agent..."
+                  options={users.filter(u => u.role === 'employee').map(u => ({ value: u.name, label: u.name }))}
+                />
+                <div className="flex items-end pb-4">
+                  <Button
+                    onClick={downloadBreakReport}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Report
+                  </Button>
                 </div>
-                <div className="flex-1">
-                  <Input
-                    label="End Date"
-                    type="date"
-                    value={breakFilters.endDate}
-                    onChange={(e) => setBreakFilters({ ...breakFilters, endDate: e.target.value })}
-                  />
-                </div>
-                <Button
-                  onClick={downloadBreakReport}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center mb-0.5"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Report
-                </Button>
               </div>
             </div>
 
@@ -4034,7 +4043,9 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {users.filter(u => u.role === 'employee').map(user => {
+                  {users.filter(u => u.role === 'employee')
+                    .filter(u => !breakFilters.agentName || u.name.toLowerCase().includes(breakFilters.agentName.toLowerCase()))
+                    .map(user => {
                     const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
                       total_break_seconds: 0,
                       current_break_start: null,
