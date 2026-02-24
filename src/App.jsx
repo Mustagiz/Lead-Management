@@ -396,12 +396,14 @@ const EmployeeDashboard = () => {
   const [currentBreakDuration, setCurrentBreakDuration] = useState(0);
   const [breakHistory, setBreakHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('leads');
+  const [dashboardMetrics, setDashboardMetrics] = useState(null);
 
   const LEADS_PER_PAGE = 10;
 
   useEffect(() => {
     loadLeads();
     loadBreakData();
+    loadDashboardMetrics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
@@ -447,6 +449,18 @@ const EmployeeDashboard = () => {
       disqualified,
       pending
     });
+  };
+
+  const loadDashboardMetrics = async () => {
+    const { data, error } = await supabase
+      .from('employee_dashboard_metrics')
+      .select('*')
+      .eq('employee_id', currentUser.id)
+      .single();
+    
+    if (!error && data) {
+      setDashboardMetrics(data);
+    }
   };
 
   const applyFilters = () => {
@@ -1045,12 +1059,24 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+  const validatePhone = (phone) => {
+    if (!phone) return true; // Optional field
+    // Accepts formats: +1-234-567-8900, (123) 456-7890, 123-456-7890, 1234567890
+    return /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/.test(phone);
+  };
+
   const handleSingleSubmit = (e) => {
     e.preventDefault();
     const newErrors = {};
 
     if (!formData.email || !validateEmail(formData.email)) {
       newErrors.email = 'Valid email is required';
+    }
+    if (formData.phone_no && !validatePhone(formData.phone_no)) {
+      newErrors.phone_no = 'Invalid phone format';
+    }
+    if (formData.direct_dial && !validatePhone(formData.direct_dial)) {
+      newErrors.direct_dial = 'Invalid phone format';
     }
     if (!formData.company_name) newErrors.company_name = 'Company name is required';
     if (!formData.first_name) newErrors.first_name = 'First name is required';
@@ -1085,6 +1111,14 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           alert('Error updating lead: ' + error.message);
           return;
         }
+        // Log the change
+        await supabase.from('audit_log').insert({
+          lead_id: leadToEdit.id,
+          qa_id: employeeId,
+          qa_name: employeeName,
+          action: 'updated',
+          details: `Lead updated by ${employeeName}`
+        });
       } else {
         // Create new lead
         const newLead = {
@@ -1731,12 +1765,14 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                           value={formData.phone_no}
                           onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
                           placeholder="+1-123-456-7890"
+                          error={errors.phone_no}
                         />
                         <Input
                           label="Direct Dial"
                           value={formData.direct_dial}
                           onChange={(e) => setFormData({ ...formData, direct_dial: e.target.value })}
                           placeholder="+1-123-456-7890 ext 123"
+                          error={errors.direct_dial}
                         />
                       </div>
                     </div>
@@ -4573,6 +4609,19 @@ const ChangePasswordModal = ({ user, onClose }) => {
 const MainLayout = () => {
   const { currentUser, logout } = useAuth();
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -4600,6 +4649,13 @@ const MainLayout = () => {
                 <p className="text-sm font-semibold text-gray-900">{currentUser.name}</p>
                 <p className="text-xs text-gray-600">{currentUser.username}</p>
               </div>
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Toggle Dark Mode"
+              >
+                {darkMode ? '🌞' : '🌙'}
+              </button>
               <Button variant="secondary" onClick={() => setShowChangePassword(true)} title="Change Password" className="px-3">
                 <Key className="w-4 h-4" />
               </Button>
