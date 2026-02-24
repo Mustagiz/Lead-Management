@@ -4293,6 +4293,18 @@ const UserModal = ({ user, onClose, onSuccess }) => {
         finalEmail = `${finalEmail}@ovmkr.site`;
       }
 
+      // PRE-CHECK: See if user already exists in profiles table
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', finalEmail)
+        .maybeSingle();
+
+      if (existingProfile) {
+        alert(`User Already Exists: "${finalEmail}" is already in your user list. \n\nPlease search for them in the "Manage Users" table.`);
+        return;
+      }
+
       // Use createUser to avoid changing the current session
       const result = await createUser({
         ...formData,
@@ -4300,7 +4312,7 @@ const UserModal = ({ user, onClose, onSuccess }) => {
       });
       if (!result.success) {
         if (result.error.includes('already registered')) {
-          alert('Error: This email is already registered in Supabase Auth but might be missing a Profile. \n\nPlease run the "Ghost User Cleanup" SQL provided in the instructions to sync your database.');
+          alert(`Ghost User Error: "${finalEmail}" is registered in Supabase Auth but MISSING from your Profile list. \n\nTo fix this specific user, run this in Supabase SQL Editor:\n\nDELETE FROM auth.users WHERE email = '${finalEmail}';`);
         } else {
           alert('Error adding user: ' + result.error);
         }
