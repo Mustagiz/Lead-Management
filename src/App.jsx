@@ -2945,7 +2945,7 @@ const AdminDashboard = () => {
         .select('*')
         .order('created_at', { ascending: false })
         .range(from, from + batchSize - 1);
-      
+
       if (batch && batch.length > 0) {
         allLeads = [...allLeads, ...batch];
         from += batchSize;
@@ -4088,48 +4088,48 @@ const AdminDashboard = () => {
                   {users.filter(u => u.role === 'employee')
                     .filter(u => !breakFilters.agentName || u.name.toLowerCase().includes(breakFilters.agentName.toLowerCase()))
                     .map(user => {
-                    const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
-                      total_break_seconds: 0,
-                      current_break_start: null,
-                      breaks: []
-                    };
-                    const isOnBreak = !!userBreakRecord.current_break_start;
-                    const totalSecs = userBreakRecord.total_break_seconds || 0;
+                      const userBreakRecord = allBreaks.find(b => b.user_id === user.id) || {
+                        total_break_seconds: 0,
+                        current_break_start: null,
+                        breaks: []
+                      };
+                      const isOnBreak = !!userBreakRecord.current_break_start;
+                      const totalSecs = userBreakRecord.total_break_seconds || 0;
 
-                    return (
-                      <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {isOnBreak ? (
-                            <div className="flex flex-col">
-                              <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 animate-pulse w-fit">
-                                On Break
+                      return (
+                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isOnBreak ? (
+                              <div className="flex flex-col">
+                                <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 animate-pulse w-fit">
+                                  On Break
+                                </span>
+                                <span className="text-[10px] text-purple-600 mt-1 font-mono">
+                                  Start: {new Date(userBreakRecord.current_break_start).toLocaleTimeString()}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Available
                               </span>
-                              <span className="text-[10px] text-purple-600 mt-1 font-mono">
-                                Start: {new Date(userBreakRecord.current_break_start).toLocaleTimeString()}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                              Available
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <span className="font-semibold">{formatTime(totalSecs)}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => { setSelectedUserForBreaks(user); setShowAdminBreakHistory(true); }}
-                            className="flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            View History
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <span className="font-semibold">{formatTime(totalSecs)}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => { setSelectedUserForBreaks(user); setShowAdminBreakHistory(true); }}
+                              className="flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View History
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -4296,7 +4296,11 @@ const UserModal = ({ user, onClose, onSuccess }) => {
         username: finalEmail
       });
       if (!result.success) {
-        alert('Error adding user: ' + result.error);
+        if (result.error.includes('already registered')) {
+          alert('Error: This email is already registered in Supabase Auth but might be missing a Profile. \n\nPlease run the "Ghost User Cleanup" SQL provided in the instructions to sync your database.');
+        } else {
+          alert('Error adding user: ' + result.error);
+        }
         return;
       }
     }

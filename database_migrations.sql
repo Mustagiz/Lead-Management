@@ -111,5 +111,9 @@ CREATE TRIGGER on_profile_deleted
   FOR EACH ROW
   EXECUTE FUNCTION delete_auth_user();
 
+-- GHOST USER CLEANUP (Run manually if needed)
+-- If a user is "already registered" but doesn't appear in the profiles list:
+-- DELETE FROM auth.users WHERE id NOT IN (SELECT id FROM public.profiles);
+
 COMMENT ON TABLE user_preferences IS 'Stores user preferences including dark mode and notification settings';
 COMMENT ON VIEW employee_dashboard_metrics IS 'Provides individual employee performance metrics';
