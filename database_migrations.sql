@@ -95,5 +95,21 @@ GROUP BY l.employee_id, p.name;
 -- Grant access to the view
 GRANT SELECT ON employee_dashboard_metrics TO authenticated;
 
+-- USER DELETION CLEANUP FIX
+-- Automatically delete auth user when profile is deleted
+CREATE OR REPLACE FUNCTION delete_auth_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_profile_deleted ON profiles;
+CREATE TRIGGER on_profile_deleted
+  AFTER DELETE ON profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION delete_auth_user();
+
 COMMENT ON TABLE user_preferences IS 'Stores user preferences including dark mode and notification settings';
 COMMENT ON VIEW employee_dashboard_metrics IS 'Provides individual employee performance metrics';
