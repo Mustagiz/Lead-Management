@@ -1146,8 +1146,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         'Email', 'Domain', 'Job Title', 'Department', 'Job Level',
         'Job Title Link', 'Phone', 'Direct Dial', 'Address', 'City',
         'State', 'Zip', 'Country', 'Industry', 'Industry Link',
-        'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue',
-        'Revenue Link', 'Tenure', 'VV Status', 'RA Comments'
+        'Employee Size', 'Associated Members', 'Employee Size Link', 'Revenue Size',
+        'Revenue Size Link', 'Tenure', 'VV Status', 'RA Comments'
       ];
 
       let headers = [...standardHeaders];
@@ -1306,7 +1306,10 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           'country': ['country', 'nation', 'region'],
           'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url', 'url'],
           'id': ['id', 'lead id', 'lead_id', 'record id'],
-          'status': ['status', 'state', 'lead status', 'current status', 'leadstatus', 'lead_status', 'lead-status', 'currentstatus']
+          'status': ['status', 'state', 'lead status', 'current status', 'leadstatus', 'lead_status', 'lead-status', 'currentstatus'],
+          'industry_type_link': ['industry link', 'industry type link', 'industry_link', 'industry_type_link'],
+          'employee_size_link': ['employee size link', 'employee_size_link', 'staff size link'],
+          'revenue_size_link': ['revenue link', 'revenue size link', 'revenue_link', 'revenue_size_link']
         };
 
         // Helper to safely get value by header name or aliases
