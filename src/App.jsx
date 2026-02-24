@@ -2890,6 +2890,8 @@ const AdminDashboard = () => {
   const [allBreaks, setAllBreaks] = useState([]);
   const [campaignPage, setCampaignPage] = useState(1);
   const CAMPAIGNS_PER_PAGE = 10;
+  const [usersPage, setUsersPage] = useState(1);
+  const USERS_PER_PAGE = 10;
 
   const formatTime = (ts) => {
     const h = Math.floor(ts / 3600);
@@ -3724,7 +3726,7 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {users.map(user => (
+                    {users.slice((usersPage - 1) * USERS_PER_PAGE, usersPage * USERS_PER_PAGE).map(user => (
                       <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <input
@@ -3775,6 +3777,31 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {Math.ceil(users.length / USERS_PER_PAGE) > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing {((usersPage - 1) * USERS_PER_PAGE) + 1} to {Math.min(usersPage * USERS_PER_PAGE, users.length)} of {users.length} users
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                      disabled={usersPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setUsersPage(p => Math.min(Math.ceil(users.length / USERS_PER_PAGE), p + 1))}
+                      disabled={usersPage === Math.ceil(users.length / USERS_PER_PAGE)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {showUserModal && (
