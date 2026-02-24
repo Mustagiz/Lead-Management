@@ -1478,12 +1478,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           setField('zip_code', 'zip_code');
           setField('country', 'country', 'United States');
           setField('industry_type', 'industry_type', 'Technology');
-          setField('industry_type_link', 'industry type link');
+          setField('industry_type_link', 'industry_type_link');
           setField('employee_size', 'employee_size', '1-10');
           setField('associated_members', 'associated members');
-          setField('employee_size_link', 'employee size link');
+          setField('employee_size_link', 'employee_size_link');
           setField('revenue_size', 'revenue_size');
-          setField('revenue_size_link', 'revenue size link');
+          setField('revenue_size_link', 'revenue_size_link');
           setField('tenure', 'tenure');
           setField('vv_status', 'vv status', 'RPC Verified');
           setField('ra_comments', 'ra comments');
