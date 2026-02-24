@@ -396,14 +396,12 @@ const EmployeeDashboard = () => {
   const [currentBreakDuration, setCurrentBreakDuration] = useState(0);
   const [breakHistory, setBreakHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('leads');
-  const [dashboardMetrics, setDashboardMetrics] = useState(null);
 
   const LEADS_PER_PAGE = 10;
 
   useEffect(() => {
     loadLeads();
     loadBreakData();
-    loadDashboardMetrics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
@@ -451,17 +449,7 @@ const EmployeeDashboard = () => {
     });
   };
 
-  const loadDashboardMetrics = async () => {
-    const { data, error } = await supabase
-      .from('employee_dashboard_metrics')
-      .select('*')
-      .eq('employee_id', currentUser.id)
-      .single();
-    
-    if (!error && data) {
-      setDashboardMetrics(data);
-    }
-  };
+
 
   const applyFilters = () => {
     let filtered = [...leads];
@@ -1062,7 +1050,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
   const validatePhone = (phone) => {
     if (!phone) return true; // Optional field
     // Accepts formats: +1-234-567-8900, (123) 456-7890, 123-456-7890, 1234567890
-    return /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/.test(phone);
+    return /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(phone);
   };
 
   const handleSingleSubmit = (e) => {
