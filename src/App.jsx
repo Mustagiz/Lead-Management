@@ -483,7 +483,7 @@ const EmployeeDashboard = () => {
     }
 
     const headers = [
-      'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
+      'id', 'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
       'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link',
       'Phone', 'Direct Dial', 'Address', 'City', 'State', 'Zip', 'Country',
       'Industry', 'Industry Link', 'Employee Size', 'Associated Members', 'Employee Size Link',
@@ -1141,7 +1141,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
     try {
       const standardHeaders = [
-        'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
+        'id', 'Date', 'RA Name', 'Campaign', 'Company', 'Salutation', 'First Name', 'Last Name',
         'Email', 'Domain', 'Job Title', 'Department', 'Job Level',
         'Job Title Link', 'Phone', 'Direct Dial', 'Address', 'City',
         'State', 'Zip', 'Country', 'Industry', 'Industry Link',
@@ -2290,7 +2290,6 @@ const QADashboard = () => {
     ];
 
     const rows = filteredLeads.map(lead => [
-      lead.id,
       formatDisplayDate(lead.date),
       lead.ra_name,
       lead.campaign || '',
@@ -3181,7 +3180,6 @@ const AdminDashboard = () => {
       }
 
       return [
-        lead.id,
         formatDisplayDate(lead.date),
         lead.ra_name,
         lead.campaign || '',
