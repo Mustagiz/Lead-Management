@@ -100,11 +100,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     useEffect(() => {
         if (uploadType !== 'single' || leadToEdit) return;
 
+        // Clear duplication error immediately if email or campaign is cleared
+        if (!formData.email || !formData.campaign) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                if (newErrors.email && newErrors.email.includes('already exists')) {
+                    delete newErrors.email;
+                }
+                return newErrors;
+            });
+            return;
+        }
+
         const timer = setTimeout(() => {
-            if (formData.email && formData.campaign) {
-                checkDuplicateEmail(formData.email, formData.campaign);
-            }
-        }, 800);
+            checkDuplicateEmail(formData.email, formData.campaign);
+        }, 200);
 
         return () => clearTimeout(timer);
     }, [formData.email, formData.campaign, uploadType, leadToEdit, checkDuplicateEmail]);
