@@ -27,21 +27,6 @@ const QADashboard = () => {
 
     const LEADS_PER_PAGE = 10;
 
-    useEffect(() => {
-        loadLeads();
-        loadBreakData();
-    }, [loadLeads, loadBreakData]);
-
-    useEffect(() => {
-        let interval;
-        if (onBreak && breakStartTime) {
-            interval = setInterval(() => {
-                const durationSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
-                setCurrentBreakDuration(durationSeconds);
-            }, 1000);
-        }
-        return () => clearInterval(interval);
-    }, [onBreak, breakStartTime]);
 
     const loadLeads = useCallback(async () => {
         const { data: leadsData, error: leadsError } = await supabase
@@ -103,6 +88,22 @@ const QADashboard = () => {
             setBreakStartTime(null);
         }
     }, [currentUser.id]);
+
+    useEffect(() => {
+        loadLeads();
+        loadBreakData();
+    }, [loadLeads, loadBreakData]);
+
+    useEffect(() => {
+        let interval;
+        if (onBreak && breakStartTime) {
+            interval = setInterval(() => {
+                const durationSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
+                setCurrentBreakDuration(durationSeconds);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [onBreak, breakStartTime]);
 
     const handleBreakToggle = async () => {
         const today = new Date().toISOString().split('T')[0];
