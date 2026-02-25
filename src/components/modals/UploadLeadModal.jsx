@@ -149,7 +149,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     }
                 }));
             } else {
-                alert('No enrichment data found or AI API Key missing.');
+                alert('No enrichment data found. Please ensure the company name and country are correct.');
             }
         } catch (error) {
             console.error('Enrichment error:', error);

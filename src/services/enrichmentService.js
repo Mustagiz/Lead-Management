@@ -1,17 +1,9 @@
-const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-
 export const enrichLead = async (companyName, country = '') => {
-    if (!OPENAI_API_KEY) {
-        console.warn('AI API Key not found. Enrichment disabled.');
-        return null;
-    }
-
     try {
-        const response = await fetch('https://chatgpt-api.shn.hk/v1/chat/completions', {
+        const response = await fetch('https://chatgpt-api.shn.hk/v1/', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENAI_API_KEY}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: 'gpt-3.5-turbo',
