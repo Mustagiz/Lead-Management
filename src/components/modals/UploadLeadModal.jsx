@@ -69,6 +69,44 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         fetchCampaigns();
     }, []);
 
+    const checkDuplicateEmail = async (email, campaign) => {
+        if (!email || !campaign || !validateEmail(email)) return;
+
+        const { data, error } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('email', email)
+            .eq('campaign', campaign)
+            .limit(1);
+
+        if (data && data.length > 0) {
+            setErrors(prev => ({
+                ...prev,
+                email: `This email already exists in campaign "${campaign}". Duplicate leads in the same campaign are not allowed.`
+            }));
+        } else {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                if (newErrors.email && newErrors.email.includes('already exists')) {
+                    delete newErrors.email;
+                }
+                return newErrors;
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (uploadType !== 'single' || leadToEdit) return;
+
+        const timer = setTimeout(() => {
+            if (formData.email && formData.campaign) {
+                checkDuplicateEmail(formData.email, formData.campaign);
+            }
+        }, 800);
+
+        return () => clearTimeout(timer);
+    }, [formData.email, formData.campaign, uploadType]);
+
     const FREE_EMAIL_DOMAINS = [
         'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
         'aol.com', 'icloud.com', 'me.com', 'mac.com', 'protonmail.com',
