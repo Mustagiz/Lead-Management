@@ -15,3 +15,8 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE leads;
     END IF;
 END $$;
+
+-- 3. Update status check constraint to include 'tbd' and others
+ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_status_check;
+ALTER TABLE leads ADD CONSTRAINT leads_status_check 
+CHECK (status IN ('pending', 'qualified', 'disqualified', 'tbd', 'approved', 'rejected', 'converted', 'callback', 'not interested', 'dnc'));
