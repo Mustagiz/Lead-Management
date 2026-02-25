@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Coffee, CheckCircle, Check, X, Filter, RefreshCw, Download, Upload, Edit, LogOut, Clock, History, Users, Eye } from 'lucide-react';
+import { Coffee, CheckCircle, Check, X, Filter, RefreshCw, Download, Upload, Edit, Clock, History, Users } from 'lucide-react';
 import LiveFeedTicker from '../common/LiveFeedTicker';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
