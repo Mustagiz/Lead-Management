@@ -425,7 +425,7 @@ const QADashboard = () => {
 
                     <Card className="p-6">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Filters</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                             <Input
                                 label="Start Date"
                                 type="date"
@@ -463,20 +463,17 @@ const QADashboard = () => {
                                     { value: 'tbd', label: 'TBD' }
                                 ]}
                             />
-                            <div className="flex flex-col mb-4">
-                                <label className="block text-sm font-semibold opacity-0 mb-1.5 ml-0.5 select-none text-transparent border-none">Spacer</label>
-                                <div className="flex items-center gap-2">
-                                    <Button onClick={applyFilters} className="h-[46px] flex-1">
-                                        <Filter className="w-4 h-4 mr-2" />
-                                        Apply
-                                    </Button>
-                                    <Button variant="secondary" onClick={handleClearFilters} className="h-[46px] px-3">
-                                        <RefreshCw className="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="secondary" onClick={downloadLeads} className="h-[46px] px-3">
-                                        <Download className="w-4 h-4" />
-                                    </Button>
-                                </div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <Button onClick={applyFilters} className="flex-1">
+                                    <Filter className="w-4 h-4 mr-2" />
+                                    Apply
+                                </Button>
+                                <Button variant="secondary" onClick={handleClearFilters} className="px-3">
+                                    <RefreshCw className="w-4 h-4" />
+                                </Button>
+                                <Button variant="secondary" onClick={downloadLeads} className="px-3">
+                                    <Download className="w-4 h-4" />
+                                </Button>
                             </div>
                         </div>
                     </Card>
