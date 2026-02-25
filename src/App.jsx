@@ -1307,9 +1307,9 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
           'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url', 'url'],
           'id': ['id', 'lead id', 'lead_id', 'record id'],
           'status': ['status', 'state', 'lead status', 'current status', 'leadstatus', 'lead_status', 'lead-status', 'currentstatus'],
-          'industry_type_link': ['industry link', 'industry type link', 'industry_link', 'industry_type_link'],
-          'employee_size_link': ['employee size link', 'employee_size_link', 'staff size link'],
-          'revenue_size_link': ['revenue link', 'revenue size link', 'revenue_link', 'revenue_size_link']
+          'industry_type_link': ['industry link', 'industry type link', 'industry_link', 'industry_type_link', 'industry l', 'industry-link', 'industrylink'],
+          'employee_size_link': ['employee size link', 'employee_size_link', 'staff size link', 'employee size l', 'employee-size-link', 'employeesizelink'],
+          'revenue_size_link': ['revenue link', 'revenue size link', 'revenue_link', 'revenue_size_link', 'revenue size l', 'revenue l', 'revenue !', 'revenue-link', 'revenuelink']
         };
 
         // Helper to safely get value by header name or aliases
@@ -2290,7 +2290,7 @@ const QADashboard = () => {
       'Email', 'Domain', 'Job Title', 'Department', 'Job Level', 'Job Title Link',
       'Phone', 'Direct Dial', 'Address', 'City', 'State', 'Zip', 'Country',
       'Industry', 'Industry Link', 'Employee Size', 'Associated Members', 'Employee Size Link',
-      'Revenue Size', 'Revenue Size Link', 'Tenure', 'VV Status', 'Status', 'RA Comments'
+      'Revenue Size', 'Revenue Size Link', 'Tenure', 'VV Status', 'Status', 'RA Comments', 'Additional Details'
     ];
 
     const rows = filteredLeads.map(lead => [
@@ -2325,12 +2325,13 @@ const QADashboard = () => {
       lead.tenure || '',
       lead.vv_status || '',
       lead.status,
-      lead.ra_comments
+      lead.ra_comments,
+      '' // Additional Details (Placeholder for consistency)
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(e => e.map(item => `"${(item || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
 
-    const blob = new Blob(['\\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
