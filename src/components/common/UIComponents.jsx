@@ -62,7 +62,7 @@ export const SearchableSelect = ({ label, value, onChange, options, placeholder 
 
     return (
         <div className="mb-4 relative">
-            {label && <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{label}</label>}
+            {label && <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-0.5">{label}</label>}
             <div className="relative">
                 <input
                     type="text"

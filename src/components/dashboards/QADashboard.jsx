@@ -420,29 +420,25 @@ const QADashboard = () => {
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                                 placeholder="Select status..."
                                 options={[
-                                    { value: 'pending', label: 'Pending' },
                                     { value: 'qualified', label: 'Qualified' },
                                     { value: 'disqualified', label: 'Disqualified' },
-                                    { value: 'tbd', label: 'TBD' },
-                                    { value: 'approved', label: 'Approved' },
-                                    { value: 'rejected', label: 'Rejected' },
-                                    { value: 'converted', label: 'Converted' },
-                                    { value: 'callback', label: 'Callback' },
-                                    { value: 'not interested', label: 'Not Interested' },
-                                    { value: 'dnc', label: 'DNC' }
+                                    { value: 'tbd', label: 'TBD' }
                                 ]}
                             />
-                            <div className="flex items-end gap-2 md:col-span-3 lg:col-span-1 pb-4">
-                                <Button onClick={applyFilters} className="flex-1">
-                                    <Filter className="w-4 h-4 mr-2" />
-                                    Apply
-                                </Button>
-                                <Button variant="secondary" onClick={handleClearFilters} className="px-3">
-                                    <RefreshCw className="w-4 h-4" />
-                                </Button>
-                                <Button variant="secondary" onClick={downloadLeads} className="px-3">
-                                    <Download className="w-4 h-4" />
-                                </Button>
+                            <div className="flex flex-col">
+                                <label className="block text-sm font-semibold opacity-0 mb-1.5 select-none text-transparent">Action</label>
+                                <div className="flex items-center gap-2">
+                                    <Button onClick={applyFilters} className="h-[46px] flex-1">
+                                        <Filter className="w-4 h-4 mr-2" />
+                                        Apply
+                                    </Button>
+                                    <Button variant="secondary" onClick={handleClearFilters} className="h-[46px] px-3">
+                                        <RefreshCw className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="secondary" onClick={downloadLeads} className="h-[46px] px-3">
+                                        <Download className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </Card>
