@@ -822,18 +822,28 @@ const AdminDashboard = () => {
                             </h3>
                             <ResponsiveContainer width="100%" height="80%">
                                 <BarChart
-                                    data={campaigns.map(c => {
-                                        const cLeads = leads.filter(l => l.campaign === c.name);
-                                        const qualified = cLeads.filter(l => l.status === 'qualified').length;
-                                        return {
-                                            name: c.name,
-                                            rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
-                                        };
-                                    })}
+                                    data={campaigns
+                                        .map(c => {
+                                            const cLeads = leads.filter(l => l.campaign === c.name);
+                                            const qualified = cLeads.filter(l => l.status === 'qualified').length;
+                                            return {
+                                                name: c.name,
+                                                rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
+                                            };
+                                        })
+                                        .sort((a, b) => b.rate - a.rate)
+                                        .slice(0, 10)}
                                     margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={100} />
+                                    <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        interval={0}
+                                        height={100}
+                                        tick={{ fontSize: 10 }}
+                                    />
                                     <YAxis />
                                     <Tooltip formatter={(value) => [`${value}%`, 'Conversion Rate']} />
                                     <Bar dataKey="rate" fill="#6366f1" radius={[4, 4, 0, 0]} />
@@ -848,14 +858,24 @@ const AdminDashboard = () => {
                             </h3>
                             <ResponsiveContainer width="100%" height="80%">
                                 <BarChart
-                                    data={campaigns.map(c => ({
-                                        name: c.name,
-                                        total: leads.filter(l => l.campaign === c.name).length
-                                    }))}
+                                    data={campaigns
+                                        .map(c => ({
+                                            name: c.name,
+                                            total: leads.filter(l => l.campaign === c.name).length
+                                        }))
+                                        .sort((a, b) => b.total - a.total)
+                                        .slice(0, 10)}
                                     margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={100} />
+                                    <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        interval={0}
+                                        height={100}
+                                        tick={{ fontSize: 10 }}
+                                    />
                                     <YAxis />
                                     <Tooltip />
                                     <Bar dataKey="total" fill="#10b981" radius={[4, 4, 0, 0]} />
