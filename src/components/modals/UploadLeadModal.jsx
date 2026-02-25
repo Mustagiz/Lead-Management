@@ -48,15 +48,10 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const [updateExistingLeads, setUpdateExistingLeads] = useState(false);
 
     const departments = ['HR', 'Finance', 'Marketing', 'Sales', 'IT', 'Operations', 'R&D', 'Customer Service', 'Legal', 'Supply Chain', 'Logistics', 'Administration', 'QA/QC', 'Engineering', 'Security', 'PMO', 'Corporate Strategy', 'PR', 'Facilities Management', 'Data Analytics'];
-
     const jobLevels = ['Entry-level', 'Junior', 'Mid-level', 'Senior', 'Principal', 'Executive', 'C-Suite'];
-
     const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'India', 'China', 'Japan', 'Brazil'];
-
     const industries = ['Technology', 'Healthcare', 'Finance', 'Retail', 'Manufacturing', 'Education', 'Real Estate', 'Energy', 'Transportation', 'Media'];
-
     const employeeSizes = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001-10000', '10,000+'];
-
     const vvStatusOptions = ['RPC Verified', 'RPC Voice Mail', 'Dail by Name', 'Operator Verified', 'Company Verified'];
 
     useEffect(() => {
@@ -75,7 +70,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     const validatePhone = (phone) => {
-        if (!phone) return true; // Optional field
+        if (!phone) return true;
         return /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(phone);
     };
 
@@ -101,7 +96,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }
 
         const submitData = async () => {
-            // Duplicate check (only for new leads or if email changed)
             if (!leadToEdit || leadToEdit.email !== formData.email) {
                 const { data: existingLeads } = await supabase
                     .from('leads')
@@ -116,7 +110,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             }
 
             if (leadToEdit) {
-                // Update existing lead
                 const { error } = await supabase
                     .from('leads')
                     .update(formData)
@@ -125,16 +118,14 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     alert('Error updating lead: ' + error.message);
                     return;
                 }
-                // Log the change
                 await supabase.from('audit_log').insert({
                     lead_id: leadToEdit.id,
-                    qa_id: employeeId,
-                    qa_name: employeeName,
+                    qa_id: currentUser.id,
+                    qa_name: currentUser.name,
                     action: 'updated',
-                    details: `Lead updated by ${employeeName}`
+                    details: `Lead updated by ${currentUser.name}`
                 });
             } else {
-                // Insert new lead
                 const { error } = await supabase
                     .from('leads')
                     .insert([{ ...formData, employee_id: employeeId, ra_name: employeeName, status: 'pending' }]);
@@ -579,13 +570,14 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border-none shadow-2xl">
                 <div className="p-6 border-b border-gray-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
                     <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <Upload className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                             {leadToEdit ? 'Edit Lead' : 'Upload Leads'}
                         </h2>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white">
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors">
                             <X className="w-6 h-6" />
                         </button>
                     </div>
@@ -599,7 +591,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                     <CheckCircle2 className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
                                 </div>
                                 <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Upload Complete!</h3>
-                                <p className="text-gray-500 dark:text-gray-400 text-lg">Your data has been processed.</p>
+                                <p className="text-gray-500 dark:text-gray-400 text-lg">Your data has been processed successfully.</p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
@@ -611,7 +603,14 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                     <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">DB Duplicates</p>
                                     <p className="text-4xl font-extrabold text-amber-900 dark:text-amber-100">{uploadResult.dbDuplicateCount}</p>
                                 </div>
-                                {/* Other stats... */}
+                                <div className="p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-2xl">
+                                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">CSV Duplicates</p>
+                                    <p className="text-4xl font-extrabold text-blue-900 dark:text-blue-100">{uploadResult.internalDuplicateCount}</p>
+                                </div>
+                                <div className="p-6 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl">
+                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Skipped Rows</p>
+                                    <p className="text-4xl font-extrabold text-slate-900 dark:text-slate-100">{uploadResult.skippedCount}</p>
+                                </div>
                             </div>
 
                             <Button onClick={() => { setUploadResult(null); onClose(); }} className="w-full py-4 text-lg">
@@ -624,13 +623,13 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                 <div className="flex bg-gray-50 dark:bg-slate-800/50 p-1.5 rounded-2xl mb-8 border border-gray-100 dark:border-slate-800">
                                     <button
                                         onClick={() => setUploadType('single')}
-                                        className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 ${uploadType === 'single' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                                        className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 ${uploadType === 'single' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
                                     >
                                         Single Lead
                                     </button>
                                     <button
                                         onClick={() => setUploadType('bulk')}
-                                        className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 ${uploadType === 'bulk' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                                        className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 ${uploadType === 'bulk' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
                                     >
                                         Bulk Upload
                                     </button>
@@ -638,46 +637,181 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                             )}
 
                             {uploadType === 'single' ? (
-                                <form onSubmit={handleSingleSubmit}>
-                                    {/* Single form implementation... */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="md:col-span-2">
-                                            <Select
-                                                label="Campaign"
-                                                value={formData.campaign}
-                                                onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
-                                                options={[{ value: '', label: '-- Select Campaign --' }, ...campaigns.map(c => ({ value: c.name, label: c.name }))]}
-                                            />
+                                <form onSubmit={handleSingleSubmit} className="space-y-8 animate-in fade-in duration-500">
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+                                            <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                            <h3 className="font-bold text-gray-900 dark:text-white">Basic Information</h3>
                                         </div>
-                                        {/* Simplified for brevity while refactoring */}
-                                        <Input label="First Name *" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} error={errors.first_name} required />
-                                        <Input label="Last Name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} />
-                                        <Input label="Email *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} error={errors.email} required />
-                                        <Input label="Company Name *" value={formData.company_name} onChange={(e) => setFormData({ ...formData, company_name: e.target.value })} error={errors.company_name} required />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="md:col-span-2">
+                                                <Select
+                                                    label="Campaign *"
+                                                    value={formData.campaign}
+                                                    onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
+                                                    options={[{ value: '', label: '-- Select Campaign --' }, ...campaigns.map(c => ({ value: c.name, label: c.name }))]}
+                                                    required
+                                                />
+                                            </div>
+                                            <Select
+                                                label="Salutation"
+                                                value={formData.salutation}
+                                                onChange={(e) => setFormData({ ...formData, salutation: e.target.value })}
+                                                options={['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Prof.'].map(s => ({ value: s, label: s }))}
+                                            />
+                                            <div className="hidden md:block"></div>
+                                            <Input label="First Name *" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} error={errors.first_name} required />
+                                            <Input label="Last Name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} />
+                                            <Input label="Email *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} error={errors.email} required />
+                                            <Input label="Phone Number" value={formData.phone_no} onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })} error={errors.phone_no} />
+                                            <Input label="Direct Dial" value={formData.direct_dial} onChange={(e) => setFormData({ ...formData, direct_dial: e.target.value })} error={errors.direct_dial} />
+                                        </div>
                                     </div>
+
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+                                            <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                            <h3 className="font-bold text-gray-900 dark:text-white">Company Information</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <Input label="Company Name *" value={formData.company_name} onChange={(e) => setFormData({ ...formData, company_name: e.target.value })} error={errors.company_name} required />
+                                            <Input label="Domain" value={formData.domain} onChange={(e) => setFormData({ ...formData, domain: e.target.value })} />
+                                            <Input label="Job Title" value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} />
+                                            <Input label="Job Title Link" value={formData.job_title_link} onChange={(e) => setFormData({ ...formData, job_title_link: e.target.value })} />
+                                            <Select label="Department" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} options={departments.map(d => ({ value: d, label: d }))} />
+                                            <Select label="Job Level" value={formData.job_level} onChange={(e) => setFormData({ ...formData, job_level: e.target.value })} options={jobLevels.map(l => ({ value: l, label: l }))} />
+                                            <Select label="Industry Type" value={formData.industry_type} onChange={(e) => setFormData({ ...formData, industry_type: e.target.value })} options={industries.map(i => ({ value: i, label: i }))} />
+                                            <Input label="Industry Link" value={formData.industry_type_link} onChange={(e) => setFormData({ ...formData, industry_type_link: e.target.value })} />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+                                            <Globe className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                            <h3 className="font-bold text-gray-900 dark:text-white">Location & Size</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <Input label="Address" value={formData.address1} onChange={(e) => setFormData({ ...formData, address1: e.target.value })} />
+                                            <Input label="City" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                                            <Input label="State" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
+                                            <Input label="Zip Code" value={formData.zip_code} onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })} />
+                                            <Select label="Country" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} options={countries.map(c => ({ value: c, label: c }))} />
+                                            <Input label="Associated Members" type="number" value={formData.associated_members} onChange={(e) => setFormData({ ...formData, associated_members: e.target.value })} />
+                                            <Select label="Employee Size" value={formData.employee_size} onChange={(e) => setFormData({ ...formData, employee_size: e.target.value })} options={employeeSizes.map(s => ({ value: s, label: s }))} />
+                                            <Input label="Employee Size Link" value={formData.employee_size_link} onChange={(e) => setFormData({ ...formData, employee_size_link: e.target.value })} />
+                                            <Input label="Revenue Size" value={formData.revenue_size} onChange={(e) => setFormData({ ...formData, revenue_size: e.target.value })} />
+                                            <Input label="Revenue Link" value={formData.revenue_size_link} onChange={(e) => setFormData({ ...formData, revenue_size_link: e.target.value })} />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+                                            <ClipboardCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                            <h3 className="font-bold text-gray-900 dark:text-white">Verification</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <Select label="VV Status" value={formData.vv_status} onChange={(e) => setFormData({ ...formData, vv_status: e.target.value })} options={vvStatusOptions.map(s => ({ value: s, label: s }))} />
+                                            <Input label="Tenure" value={formData.tenure} onChange={(e) => setFormData({ ...formData, tenure: e.target.value })} />
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">RA Comments</label>
+                                        <textarea
+                                            value={formData.ra_comments}
+                                            onChange={(e) => setFormData({ ...formData, ra_comments: e.target.value })}
+                                            className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                            rows="3"
+                                            placeholder="Add any comments or notes..."
+                                        />
+                                    </div>
+
+                                    {formData.campaign && campaigns.find(c => c.name === formData.campaign)?.custom_questions?.length > 0 && (
+                                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800">
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Additional Information</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {campaigns.find(c => c.name === formData.campaign).custom_questions.map((q) => (
+                                                    <div key={q.id} className="md:col-span-2">
+                                                        <Input
+                                                            label={q.question}
+                                                            value={formData.custom_question_responses?.[q.id] || ''}
+                                                            onChange={(e) => setFormData({
+                                                                ...formData,
+                                                                custom_question_responses: { ...formData.custom_question_responses, [q.id]: e.target.value }
+                                                            })}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex justify-end gap-4 mt-10 pt-6 border-t border-gray-100 dark:border-slate-800">
-                                        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                                        <Button type="submit">{leadToEdit ? 'Update Lead' : 'Upload Lead'}</Button>
+                                        <Button variant="secondary" onClick={onClose} type="button">Cancel</Button>
+                                        <Button type="submit" className="min-w-[150px]">
+                                            <Upload className="w-4 h-4 mr-2" />
+                                            {leadToEdit ? 'Update Lead' : 'Upload Lead'}
+                                        </Button>
                                     </div>
                                 </form>
                             ) : (
-                                <form onSubmit={handleBulkUpload}>
-                                    <Select
-                                        label="Select Campaign *"
-                                        value={selectedBulkCampaign}
-                                        onChange={(e) => setSelectedBulkCampaign(e.target.value)}
-                                        options={[{ value: '', label: '-- Select Campaign --' }, ...campaigns.map(c => ({ value: c.name, label: c.name }))]}
-                                    />
-                                    <div className="group relative border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-3xl p-12 text-center transition-all hover:border-indigo-300 dark:hover:border-indigo-500 cursor-pointer mt-4">
+                                <form onSubmit={handleBulkUpload} className="space-y-6 animate-in fade-in duration-500">
+                                    <div className="space-y-4">
+                                        <Select
+                                            label="Select Campaign (Required) *"
+                                            value={selectedBulkCampaign}
+                                            onChange={(e) => setSelectedBulkCampaign(e.target.value)}
+                                            options={[{ value: '', label: '-- Select Campaign --' }, ...campaigns.map(c => ({ value: c.name, label: c.name }))]}
+                                            required
+                                        />
+                                        {(currentUser?.role === 'qa' || currentUser?.role === 'admin') && (
+                                            <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
+                                                <input
+                                                    type="checkbox"
+                                                    id="update-existing"
+                                                    checked={updateExistingLeads}
+                                                    onChange={(e) => setUpdateExistingLeads(e.target.checked)}
+                                                    className="w-5 h-5 text-amber-600 focus:ring-amber-500 border-amber-300 dark:border-amber-700 rounded cursor-pointer"
+                                                />
+                                                <label htmlFor="update-existing" className="text-sm font-bold text-amber-800 dark:text-amber-400 cursor-pointer">
+                                                    Update existing leads (match by email)
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="group relative border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-3xl p-12 text-center transition-all hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer">
                                         <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files[0])} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                         <div className="flex flex-col items-center">
-                                            <Upload className="w-8 h-8 text-gray-400 mb-4" />
-                                            <p className="dark:text-white font-bold">{csvFile ? csvFile.name : 'Click to upload CSV'}</p>
+                                            <div className="w-16 h-16 bg-gray-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                                                <Upload className="w-8 h-8 text-gray-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
+                                            </div>
+                                            <p className="text-gray-900 dark:text-white font-bold text-lg mb-1">
+                                                {csvFile ? csvFile.name : 'Click to upload or drag & drop'}
+                                            </p>
+                                            <p className="text-gray-500 dark:text-gray-400 text-sm">Supported format: .csv</p>
+                                        </div>
+
+                                        <div className="mt-8 pt-8 border-t border-gray-100 dark:border-slate-800 flex flex-col items-center gap-4 relative z-10">
+                                            <button
+                                                type="button"
+                                                onClick={downloadTemplate}
+                                                className="group/link text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold flex items-center gap-2 transition-colors"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                <span className="underline underline-offset-4 decoration-indigo-200 dark:decoration-indigo-800">
+                                                    Download CSV Template
+                                                </span>
+                                            </button>
                                         </div>
                                     </div>
+
                                     <div className="flex justify-end gap-4 mt-10 pt-6 border-t border-gray-100 dark:border-slate-800">
-                                        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                                        <Button type="submit" disabled={!csvFile}>Process CSV</Button>
+                                        <Button variant="secondary" onClick={onClose} type="button">Cancel</Button>
+                                        <Button type="submit" disabled={!csvFile} className="min-w-[150px]">
+                                            <Upload className="w-4 h-4 mr-2" />
+                                            Process CSV
+                                        </Button>
                                     </div>
                                 </form>
                             )}
