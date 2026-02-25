@@ -95,7 +95,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 return newErrors;
             });
         }
-    }, [supabase]);
+    }, []);
 
     useEffect(() => {
         if (uploadType !== 'single' || leadToEdit) return;
