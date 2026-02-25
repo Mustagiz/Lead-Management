@@ -44,7 +44,13 @@ const QADashboard = () => {
                 .order('created_at', { ascending: false })
                 .range(from, to);
 
-            if (leadsError || !leadsData || leadsData.length === 0) {
+            if (leadsError) {
+                console.error('Error fetching leads in QA:', leadsError);
+                finishedLeads = true;
+                continue;
+            }
+
+            if (!leadsData || leadsData.length === 0) {
                 finishedLeads = true;
             } else {
                 allLeads = [...allLeads, ...leadsData];

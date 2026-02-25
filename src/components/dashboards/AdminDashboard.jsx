@@ -103,11 +103,17 @@ const AdminDashboard = () => {
         let hasMore = true;
 
         while (hasMore) {
-            const { data: batch } = await supabase
+            const { data: batch, error: leadsError } = await supabase
                 .from('leads')
                 .select('*')
                 .order('created_at', { ascending: false })
                 .range(from, from + batchSize - 1);
+
+            if (leadsError) {
+                console.error('Error fetching leads:', leadsError);
+                hasMore = false;
+                continue;
+            }
 
             if (batch && batch.length > 0) {
                 allLeads = [...allLeads, ...batch];
