@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, X, CheckCircle2, Target, Building2, Globe, ClipboardCheck } from 'lucide-react';
+import { Upload, Download, X, CheckCircle2, Target, Building2, Globe, ClipboardCheck, Sparkles } from 'lucide-react';
+import { enrichLead } from '../../services/enrichmentService';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input, Select, Card } from '../common/UIComponents';
@@ -46,6 +47,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const [campaigns, setCampaigns] = useState([]);
     const [uploadResult, setUploadResult] = useState(null);
     const [updateExistingLeads, setUpdateExistingLeads] = useState(false);
+    const [isEnriching, setIsEnriching] = useState(false);
 
     const departments = ['HR', 'Finance', 'Marketing', 'Sales', 'IT', 'Operations', 'R&D', 'Customer Service', 'Legal', 'Supply Chain', 'Logistics', 'Administration', 'QA/QC', 'Engineering', 'Security', 'PMO', 'Corporate Strategy', 'PR', 'Facilities Management', 'Data Analytics'];
     const jobLevels = ['Entry-level', 'Junior', 'Mid-level', 'Senior', 'Principal', 'Executive', 'C-Suite'];
@@ -72,6 +74,35 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const validatePhone = (phone) => {
         if (!phone) return true;
         return /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(phone);
+    };
+
+    const handleEnrich = async () => {
+        if (!formData.company_name) {
+            alert('Please enter a company name first.');
+            return;
+        }
+
+        setIsEnriching(true);
+        try {
+            const enrichedData = await enrichLead(formData.company_name, formData.country);
+            if (enrichedData) {
+                setFormData(prev => ({
+                    ...prev,
+                    linkedin_url: enrichedData.linkedin_url || prev.linkedin_url,
+                    revenue_size: enrichedData.revenue_range || prev.revenue_size,
+                    custom_question_responses: {
+                        ...prev.custom_question_responses,
+                        enrichment_contacts: JSON.stringify(enrichedData.key_contacts || [])
+                    }
+                }));
+            } else {
+                alert('No enrichment data found or AI API Key missing.');
+            }
+        } catch (error) {
+            console.error('Enrichment error:', error);
+        } finally {
+            setIsEnriching(false);
+        }
     };
 
     const handleSingleSubmit = (e) => {
@@ -462,6 +493,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     setField('tenure', 'tenure');
                     setField('vv_status', 'vv status', 'RPC Verified');
                     setField('ra_comments', 'ra comments');
+                    setField('linkedin_url', 'linkedin url');
 
                     if (Object.keys(customQuestionResponses).length > 0) {
                         leadData.custom_question_responses = customQuestionResponses;
@@ -674,7 +706,20 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                             <h3 className="font-bold text-gray-900 dark:text-white">Company Information</h3>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <Input label="Company Name *" value={formData.company_name} onChange={(e) => setFormData({ ...formData, company_name: e.target.value })} error={errors.company_name} required />
+                                            <div className="flex items-end gap-2">
+                                                <div className="flex-1">
+                                                    <Input label="Company Name *" value={formData.company_name} onChange={(e) => setFormData({ ...formData, company_name: e.target.value })} error={errors.company_name} required />
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    onClick={handleEnrich}
+                                                    disabled={isEnriching}
+                                                    className="mb-1"
+                                                >
+                                                    {isEnriching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-500" />}
+                                                </Button>
+                                            </div>
                                             <Input label="Domain" value={formData.domain} onChange={(e) => setFormData({ ...formData, domain: e.target.value })} />
                                             <Input label="Job Title" value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} />
                                             <Input label="Job Title Link" value={formData.job_title_link} onChange={(e) => setFormData({ ...formData, job_title_link: e.target.value })} />
@@ -700,6 +745,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                             <Select label="Employee Size" value={formData.employee_size} onChange={(e) => setFormData({ ...formData, employee_size: e.target.value })} options={employeeSizes.map(s => ({ value: s, label: s }))} />
                                             <Input label="Employee Size Link" value={formData.employee_size_link} onChange={(e) => setFormData({ ...formData, employee_size_link: e.target.value })} />
                                             <Input label="Revenue Size" value={formData.revenue_size} onChange={(e) => setFormData({ ...formData, revenue_size: e.target.value })} />
+                                            <Input label="LinkedIn URL" value={formData.linkedin_url || ''} onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })} />
                                             <Input label="Revenue Link" value={formData.revenue_size_link} onChange={(e) => setFormData({ ...formData, revenue_size_link: e.target.value })} />
                                         </div>
                                     </div>

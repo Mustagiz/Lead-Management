@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Coffee, CheckCircle, Check, X, Filter, RefreshCw, Download, Upload, Edit, LogOut } from 'lucide-react';
+import LiveFeedTicker from '../common/LiveFeedTicker';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
@@ -303,6 +304,7 @@ const QADashboard = () => {
 
     return (
         <div className="space-y-6">
+            <LiveFeedTicker />
             {/* Tab Navigation */}
             <div className="flex gap-4 border-b border-gray-200 dark:border-slate-800">
                 <button

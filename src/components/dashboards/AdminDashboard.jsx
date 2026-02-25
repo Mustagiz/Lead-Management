@@ -10,6 +10,7 @@ import UserModal from '../modals/UserModal';
 import CampaignModal from '../modals/CampaignModal';
 import ConfirmationModal from '../modals/ConfirmationModal';
 import AdminBreakHistoryModal from '../modals/AdminBreakHistoryModal';
+import LiveFeedTicker from '../common/LiveFeedTicker';
 
 const AdminDashboard = () => {
     const { currentUser } = useAuth();
@@ -420,6 +421,7 @@ const AdminDashboard = () => {
 
     return (
         <div className="space-y-6">
+            <LiveFeedTicker />
             <div className="flex flex-wrap gap-2 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800">
                 {[
                     { id: 'overview', icon: <BarChart3 className="w-4 h-4 mr-2" />, label: 'Overview' },
