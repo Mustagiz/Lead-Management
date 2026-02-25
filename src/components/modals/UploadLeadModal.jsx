@@ -517,7 +517,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     const batch = idsToFetch.slice(i, i + batchSize);
                     const { data } = await supabase.from('leads').select('id, email, employee_id, ra_name').in('id', batch);
                     data?.forEach(l => {
-                        existingInfoMap.byId[l.id] = { employee_id: l.employee_id, ra_name: l.ra_name };
+                        existingInfoMap.byId[l.id] = { id: l.id, employee_id: l.employee_id, ra_name: l.ra_name };
                         if (l.email) existingInfoMap.byEmail[l.email.toLowerCase()] = { id: l.id, employee_id: l.employee_id, ra_name: l.ra_name };
                     });
                 }
