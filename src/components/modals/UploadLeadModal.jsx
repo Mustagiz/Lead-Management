@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, X, CheckCircle2, Target, Building2, Globe, ClipboardCheck, Sparkles } from 'lucide-react';
+import { Upload, Download, X, CheckCircle2, Target, Building2, Globe, ClipboardCheck, Sparkles, RefreshCw } from 'lucide-react';
 import { enrichLead } from '../../services/enrichmentService';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
