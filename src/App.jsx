@@ -4713,9 +4713,9 @@ const MainLayout = () => {
   }, [darkMode]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40 transition-all duration-300">
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 sticky top-0 z-40 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4 group cursor-pointer">
@@ -4735,12 +4735,12 @@ const MainLayout = () => {
 
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">{currentUser.name}</p>
-                <p className="text-xs text-gray-600">{currentUser.username}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{currentUser.name}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{currentUser.username}</p>
               </div>
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
                 title="Toggle Dark Mode"
               >
                 {darkMode ? '🌞' : '🌙'}
@@ -4750,7 +4750,7 @@ const MainLayout = () => {
               </Button>
               <Button
                 onClick={logout}
-                className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-100 px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all duration-300 shadow-sm hover:shadow-red-200"
+                className="bg-red-50 dark:bg-red-900/10 hover:bg-red-600 text-red-600 hover:text-white border border-red-100 dark:border-red-900/20 px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all duration-300 shadow-sm hover:shadow-red-200 dark:hover:shadow-red-900/40"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Sign Out</span>
@@ -4775,7 +4775,7 @@ const MainLayout = () => {
       )}
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 mt-12">
+      <footer className="bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 mt-12">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
