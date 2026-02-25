@@ -52,7 +52,7 @@ export const SearchableSelect = ({ label, value, onChange, options, placeholder 
     const [isOpen, setIsOpen] = useState(false);
 
     const filteredOptions = options.filter(opt =>
-        opt.label.toLowerCase().includes((value || '').toLowerCase())
+        (opt.label || '').toLowerCase().includes((value || '').toLowerCase())
     );
 
     const handleSelect = (selectedValue) => {

@@ -512,8 +512,8 @@ const AdminDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <Input label="Start Date" type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
                             <Input label="End Date" type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
-                            <SearchableSelect label="Agent" value={filters.agent} onChange={(e) => setFilters({ ...filters, agent: e.target.value })} options={users.map(u => ({ value: u.name, label: u.name }))} />
-                            <SearchableSelect label="Campaign" value={filters.campaign} onChange={(e) => setFilters({ ...filters, campaign: e.target.value })} options={campaigns.map(c => ({ value: c.name, label: c.name }))} />
+                            <SearchableSelect label="Agent" value={filters.agent} onChange={(e) => setFilters({ ...filters, agent: e.target.value })} options={users.filter(u => u.name).map(u => ({ value: u.name, label: u.name }))} />
+                            <SearchableSelect label="Campaign" value={filters.campaign} onChange={(e) => setFilters({ ...filters, campaign: e.target.value })} options={campaigns.filter(c => c.name).map(c => ({ value: c.name, label: c.name }))} />
                             <SearchableSelect
                                 label="Status"
                                 value={filters.status}
@@ -584,7 +584,7 @@ const AdminDashboard = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
                                     {paginatedLeads.map(lead => {
-                                        const isStale = new Date(lead.updated_at) < new Date(Date.now() - 48 * 60 * 60 * 1000);
+                                        const isStale = lead.updated_at && new Date(lead.updated_at) < new Date(Date.now() - 48 * 60 * 60 * 1000);
                                         return (
                                             <tr key={lead.id} className={`hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${isStale ? 'bg-red-50/10' : ''}`}>
                                                 <td className="px-6 py-4">
@@ -984,7 +984,7 @@ const AdminDashboard = () => {
                                 label="Update Campaign"
                                 value={bulkEditForm.campaign}
                                 onChange={(e) => setBulkEditForm({ ...bulkEditForm, campaign: e.target.value })}
-                                options={campaigns.map(c => ({ value: c.name, label: c.name }))}
+                                options={campaigns.filter(c => c.name).map(c => ({ value: c.name, label: c.name }))}
                             />
                             <div className="flex justify-end gap-3 mt-6">
                                 <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>Cancel</Button>
