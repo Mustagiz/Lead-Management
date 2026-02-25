@@ -825,9 +825,9 @@ const EmployeeDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{lead.job_title}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 text-green-700 border-green-100' :
-                          lead.status === 'disqualified' ? 'bg-red-50 text-red-700 border-red-100' :
-                            'bg-yellow-50 text-yellow-700 border-yellow-100'
+                        <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/20' :
+                          lead.status === 'disqualified' ? 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/20' :
+                            'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
                           } uppercase`}>
                           {lead.status}
                         </span>
@@ -3377,8 +3377,8 @@ const AdminDashboard = () => {
               <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
               <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Qualified</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.qualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Qualified</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.qualified}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
                   <CheckCircle className="w-6 h-6 text-white" />
@@ -3390,8 +3390,8 @@ const AdminDashboard = () => {
               <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
               <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Disqualified</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.disqualified}</p>
+                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Disqualified</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.disqualified}</p>
                 </div>
                 <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
                   <XCircle className="w-6 h-6 text-white" />
