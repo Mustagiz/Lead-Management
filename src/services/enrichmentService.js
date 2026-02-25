@@ -7,7 +7,7 @@ export const enrichLead = async (companyName, country = '') => {
     }
 
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch('https://chatgpt-api.shn.hk/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
