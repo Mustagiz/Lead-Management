@@ -456,11 +456,29 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     setField('ra_name', 'ra name', employeeName);
                     setField('employee_id', 'employee_id', employeeId);
 
-                    const VALID_STATUSES = ['pending', 'qualified', 'disqualified', 'approved', 'rejected', 'converted', 'callback', 'not interested', 'dnc'];
+                    const STATUS_MAP = {
+                        'qualify': 'qualified',
+                        'qualified': 'qualified',
+                        'disqualify': 'disqualified',
+                        'disqualified': 'disqualified',
+                        'tbd': 'tbd',
+                        'pending': 'pending',
+                        'approved': 'approved',
+                        'rejected': 'rejected',
+                        'converted': 'converted',
+                        'callback': 'callback',
+                        'not interested': 'not interested',
+                        'dnc': 'dnc'
+                    };
+
                     const rawStatusVal = getValue(columns, 'status');
                     if (rawStatusVal !== '') {
-                        const rawStatus = rawStatusVal.trim().toLowerCase();
-                        leadData.status = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'pending';
+                        const normalizedStatus = rawStatusVal.trim().toLowerCase();
+                        if (STATUS_MAP[normalizedStatus]) {
+                            leadData.status = STATUS_MAP[normalizedStatus];
+                        } else if (!leadId) {
+                            leadData.status = 'pending';
+                        }
                     } else if (!leadId) {
                         leadData.status = 'pending';
                     }
