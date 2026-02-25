@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, X, AlertCircle, CheckCircle2, Target, Building2, Globe, ClipboardCheck } from 'lucide-react';
+import { Upload, Download, X, CheckCircle2, Target, Building2, Globe, ClipboardCheck } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input, Select, Card } from '../common/UIComponents';

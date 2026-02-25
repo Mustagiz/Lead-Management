@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Coffee, CheckCircle, Check, X, Filter, RefreshCw, Download, Upload, Edit, Clock, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Coffee, CheckCircle, Check, X, Filter, RefreshCw, Download, Upload, Edit, LogOut } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
@@ -30,7 +30,7 @@ const QADashboard = () => {
     useEffect(() => {
         loadLeads();
         loadBreakData();
-    }, []);
+    }, [loadLeads, loadBreakData]);
 
     useEffect(() => {
         let interval;
@@ -43,7 +43,7 @@ const QADashboard = () => {
         return () => clearInterval(interval);
     }, [onBreak, breakStartTime]);
 
-    const loadLeads = async () => {
+    const loadLeads = useCallback(async () => {
         const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
             .select('*')
@@ -58,6 +58,7 @@ const QADashboard = () => {
             .from('campaigns')
             .select('*')
             .eq('is_active', true);
+
         setActiveCampaigns(campaignsData || []);
 
         const { data: auditLog, error: auditError } = await supabase
@@ -72,9 +73,9 @@ const QADashboard = () => {
                 disqualified: auditLog.filter(l => l.action === 'disqualified').length
             });
         }
-    };
+    }, [currentUser.id]);
 
-    const loadBreakData = async () => {
+    const loadBreakData = useCallback(async () => {
         const today = new Date().toISOString().split('T')[0];
         const { data: userBreaks, error } = await supabase
             .from('breaks_monitoring')
@@ -101,7 +102,7 @@ const QADashboard = () => {
             setOnBreak(false);
             setBreakStartTime(null);
         }
-    };
+    }, [currentUser.id]);
 
     const handleBreakToggle = async () => {
         const today = new Date().toISOString().split('T')[0];
@@ -299,8 +300,6 @@ const QADashboard = () => {
         currentPage * LEADS_PER_PAGE
     );
 
-    const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE);
-
     return (
         <div className="space-y-6">
             {/* Tab Navigation */}
@@ -478,8 +477,8 @@ const QADashboard = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{lead.first_name} {lead.last_name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/20' :
-                                                        lead.status === 'disqualified' ? 'bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/20' :
-                                                            'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
+                                                    lead.status === 'disqualified' ? 'bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/20' :
+                                                        'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
                                                     } uppercase`}>
                                                     {lead.status}
                                                 </span>

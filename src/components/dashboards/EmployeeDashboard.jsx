@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Coffee, BarChart3, CheckCircle, XCircle, Clock, Filter, Search, RefreshCw, Download, Upload, Eye } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,25 +25,7 @@ const EmployeeDashboard = () => {
 
     const LEADS_PER_PAGE = 10;
 
-    useEffect(() => {
-        if (currentUser) {
-            loadLeads();
-            loadBreakData();
-        }
-    }, [currentUser]);
-
-    useEffect(() => {
-        let interval;
-        if (onBreak && breakStartTime) {
-            interval = setInterval(() => {
-                const durationSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
-                setCurrentBreakDuration(durationSeconds);
-            }, 1000);
-        }
-        return () => clearInterval(interval);
-    }, [onBreak, breakStartTime]);
-
-    const loadLeads = async () => {
+    const loadLeads = useCallback(async () => {
         const { data: userLeads, error } = await supabase
             .from('leads')
             .select('*')
@@ -74,7 +56,54 @@ const EmployeeDashboard = () => {
             disqualified,
             pending
         });
-    };
+    }, [currentUser.id]);
+
+    const loadBreakData = useCallback(async () => {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: userBreaks, error } = await supabase
+            .from('breaks_monitoring')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('date', today)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Error loading break data:', error);
+            return;
+        }
+
+        if (userBreaks) {
+            setTotalBreakTime(userBreaks.total_break_seconds || 0);
+            setBreakHistory(userBreaks.breaks || []);
+            if (userBreaks.current_break_start) {
+                setOnBreak(true);
+                setBreakStartTime(new Date(userBreaks.current_break_start).getTime());
+            }
+        } else {
+            setTotalBreakTime(0);
+            setBreakHistory([]);
+            setOnBreak(false);
+            setBreakStartTime(null);
+        }
+    }, [currentUser.id]);
+
+    useEffect(() => {
+        if (currentUser) {
+            loadLeads();
+            loadBreakData();
+        }
+    }, [currentUser, loadLeads, loadBreakData]);
+
+    useEffect(() => {
+        let interval;
+        if (onBreak && breakStartTime) {
+            interval = setInterval(() => {
+                const durationSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
+                setCurrentBreakDuration(durationSeconds);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [onBreak, breakStartTime]);
 
     const applyFilters = () => {
         let filtered = [...leads];
@@ -181,35 +210,6 @@ const EmployeeDashboard = () => {
         URL.revokeObjectURL(url);
     };
 
-    const loadBreakData = async () => {
-        const today = new Date().toISOString().split('T')[0];
-        const { data: userBreaks, error } = await supabase
-            .from('breaks_monitoring')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .eq('date', today)
-            .maybeSingle();
-
-        if (error) {
-            console.error('Error loading break data:', error);
-            return;
-        }
-
-        if (userBreaks) {
-            setTotalBreakTime(userBreaks.total_break_seconds || 0);
-            setBreakHistory(userBreaks.breaks || []);
-            if (userBreaks.current_break_start) {
-                setOnBreak(true);
-                setBreakStartTime(new Date(userBreaks.current_break_start).getTime());
-            }
-        } else {
-            setTotalBreakTime(0);
-            setBreakHistory([]);
-            setOnBreak(false);
-            setBreakStartTime(null);
-        }
-    };
-
     const handleBreakToggle = async () => {
         const today = new Date().toISOString().split('T')[0];
 
@@ -277,7 +277,6 @@ const EmployeeDashboard = () => {
 
     return (
         <div className="space-y-6">
-            {/* Tab Navigation */}
             <div className="flex gap-4 border-b border-gray-200 dark:border-slate-800">
                 <button
                     onClick={() => setActiveTab('leads')}
@@ -429,8 +428,8 @@ const EmployeeDashboard = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{lead.email}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/20' :
-                                                        lead.status === 'disqualified' ? 'bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/20' :
-                                                            'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
+                                                    lead.status === 'disqualified' ? 'bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/20' :
+                                                        'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
                                                     } uppercase`}>
                                                     {lead.status}
                                                 </span>
