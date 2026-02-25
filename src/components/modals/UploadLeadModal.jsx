@@ -69,7 +69,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         fetchCampaigns();
     }, []);
 
+    const FREE_EMAIL_DOMAINS = [
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
+        'aol.com', 'icloud.com', 'me.com', 'mac.com', 'protonmail.com',
+        'mail.com', 'yandex.com', 'gmx.com', 'zoho.com', 'rediffmail.com',
+        'inbox.com', 'fastmail.com', 'tutanota.com', 'hushmail.com',
+        'yahoo.co.in', 'yahoo.co.uk', 'hotmail.co.uk', 'hotmail.in'
+    ];
+
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const isProfessionalEmail = (email) => {
+        if (!validateEmail(email)) return false;
+        const domain = email.split('@')[1]?.toLowerCase();
+        return !FREE_EMAIL_DOMAINS.includes(domain);
+    };
 
     const validatePhone = (phone) => {
         if (!phone) return true;
@@ -127,16 +141,34 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }
 
         const submitData = async () => {
-            if (!leadToEdit || leadToEdit.email !== formData.email) {
+            // Professional email check
+            if (formData.email && !isProfessionalEmail(formData.email)) {
+                setErrors(prev => ({ ...prev, email: 'Please use a professional/corporate email address (no Gmail, Yahoo, etc.)' }));
+                return;
+            }
+
+            // Campaign-specific duplicate check
+            if (!leadToEdit) {
                 const { data: existingLeads } = await supabase
                     .from('leads')
-                    .select('id, company_name')
-                    .eq('email', formData.email);
+                    .select('id, company_name, campaign')
+                    .eq('email', formData.email)
+                    .eq('campaign', formData.campaign);
 
                 if (existingLeads && existingLeads.length > 0) {
-                    if (!window.confirm(`A lead with this email already exists in "${existingLeads[0].company_name}". Do you want to proceed and create a duplicate?`)) {
-                        return;
-                    }
+                    setErrors(prev => ({ ...prev, email: `This email already exists in campaign "${formData.campaign}". Duplicate leads in the same campaign are not allowed.` }));
+                    return;
+                }
+            } else if (leadToEdit.email !== formData.email) {
+                const { data: existingLeads } = await supabase
+                    .from('leads')
+                    .select('id, company_name, campaign')
+                    .eq('email', formData.email)
+                    .eq('campaign', leadToEdit.campaign);
+
+                if (existingLeads && existingLeads.length > 0) {
+                    setErrors(prev => ({ ...prev, email: `This email already exists in campaign "${leadToEdit.campaign}".` }));
+                    return;
                 }
             }
 
@@ -149,13 +181,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     alert('Error updating lead: ' + error.message);
                     return;
                 }
-                await supabase.from('audit_log').insert({
-                    lead_id: leadToEdit.id,
-                    qa_id: currentUser.id,
-                    qa_name: currentUser.name,
-                    action: 'updated',
-                    details: `Lead updated by ${currentUser.name}`
-                });
+                // Manual audit log removed as it's now handled by the database trigger
             } else {
                 const { error } = await supabase
                     .from('leads')
@@ -396,6 +422,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 let skippedCount = 0;
                 let missingCampaignCount = 0;
                 let internalDuplicateCount = 0;
+                let invalidEmailCount = 0;
                 const newLeads = [];
                 const seenEmails = new Set();
 
@@ -406,6 +433,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                     if (!companyName) {
                         skippedCount++;
+                        continue;
+                    }
+
+                    // Professional email validation
+                    if (email && !isProfessionalEmail(email)) {
+                        invalidEmailCount++;
                         continue;
                     }
 
@@ -527,54 +560,69 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 }
 
                 const batchSize = 500;
-                const existingInfoMap = { byId: {}, byEmail: {} };
+                // Store email+campaign combinations for campaign-specific dedup
+                const existingInfoMap = { byId: {}, byEmailCampaign: {}, byEmail: {} };
                 const idsToFetch = newLeads.map(l => l.id).filter(Boolean);
                 const emailsToFetch = newLeads.map(l => l.email).filter(Boolean);
 
                 for (let i = 0; i < idsToFetch.length; i += batchSize) {
                     const batch = idsToFetch.slice(i, i + batchSize);
-                    const { data } = await supabase.from('leads').select('id, email, employee_id, ra_name').in('id', batch);
+                    const { data } = await supabase.from('leads').select('id, email, campaign, employee_id, ra_name').in('id', batch);
                     data?.forEach(l => {
-                        existingInfoMap.byId[l.id] = { id: l.id, employee_id: l.employee_id, ra_name: l.ra_name };
-                        if (l.email) existingInfoMap.byEmail[l.email.toLowerCase()] = { id: l.id, employee_id: l.employee_id, ra_name: l.ra_name };
+                        existingInfoMap.byId[l.id] = { id: l.id, campaign: l.campaign, employee_id: l.employee_id, ra_name: l.ra_name };
+                        if (l.email) {
+                            const key = `${l.email.toLowerCase()}::${(l.campaign || '').toLowerCase()}`;
+                            existingInfoMap.byEmailCampaign[key] = { id: l.id };
+                            existingInfoMap.byEmail[l.email.toLowerCase()] = { id: l.id, campaign: l.campaign };
+                        }
                     });
                 }
 
                 const remainingEmails = emailsToFetch.filter(e => !existingInfoMap.byEmail[e.toLowerCase()]);
                 for (let i = 0; i < remainingEmails.length; i += batchSize) {
                     const batch = remainingEmails.slice(i, i + batchSize);
-                    const { data } = await supabase.from('leads').select('id, email, employee_id, ra_name').in('email', batch);
+                    const { data } = await supabase.from('leads').select('id, email, campaign, employee_id, ra_name').in('email', batch);
                     data?.forEach(l => {
-                        existingInfoMap.byEmail[l.email.toLowerCase()] = { id: l.id, employee_id: l.employee_id, ra_name: l.ra_name };
+                        if (l.email) {
+                            const key = `${l.email.toLowerCase()}::${(l.campaign || '').toLowerCase()}`;
+                            existingInfoMap.byEmailCampaign[key] = { id: l.id };
+                            existingInfoMap.byEmail[l.email.toLowerCase()] = { id: l.id, campaign: l.campaign };
+                        }
                     });
                 }
 
                 const finalLeads = [];
                 let dbDuplicateCount = 0;
-                let leadsToSkip = [];
+                let campaignDuplicateCount = 0;
 
                 for (const nl of newLeads) {
-                    let existing = null;
-                    if (nl.id) existing = existingInfoMap.byId[nl.id];
-                    if (!existing && nl.email) existing = existingInfoMap.byEmail[nl.email.toLowerCase()];
+                    let existingById = null;
+                    if (nl.id) existingById = existingInfoMap.byId[nl.id];
 
-                    if (existing) {
+                    if (existingById) {
+                        // Update existing lead found by ID
                         dbDuplicateCount++;
-                        if (nl.id || updateExistingLeads) {
+                        if (updateExistingLeads) {
                             const { employee_id, ra_name, id, ...updateData } = nl;
-                            finalLeads.push({ ...updateData, id: existing.id });
-                        } else {
-                            leadsToSkip.push(nl);
+                            finalLeads.push({ ...updateData, id: existingById.id });
                         }
-                    } else {
-                        const { id, ...insertData } = nl;
-                        finalLeads.push(insertData);
+                        continue;
                     }
+
+                    // Campaign-specific duplicate check: reject silently if same email+campaign
+                    if (nl.email) {
+                        const campaignKey = `${nl.email.toLowerCase()}::${(nl.campaign || '').toLowerCase()}`;
+                        if (existingInfoMap.byEmailCampaign[campaignKey]) {
+                            campaignDuplicateCount++;
+                            continue; // Reject - duplicate in same campaign
+                        }
+                    }
+
+                    const { id, ...insertData } = nl;
+                    finalLeads.push(insertData);
                 }
 
-                if (leadsToSkip.length > 0) {
-                    if (!window.confirm(`${leadsToSkip.length} existing leads found. Do you want to skip these?`)) return;
-                }
+
 
                 if (finalLeads.length === 0) {
                     alert('No leads to process.');
@@ -608,6 +656,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     successCount,
                     dbDuplicateCount,
                     internalDuplicateCount,
+                    campaignDuplicateCount,
+                    invalidEmailCount,
                     skippedCount,
                     missingCampaignCount
                 });
@@ -644,20 +694,28 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                 <p className="text-gray-500 dark:text-gray-400 text-lg">Your data has been processed successfully.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
-                                <div className="p-6 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-2xl">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
+                                <div className="p-5 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-2xl">
                                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">Imported</p>
                                     <p className="text-4xl font-extrabold text-emerald-900 dark:text-emerald-100">{uploadResult.successCount}</p>
                                 </div>
-                                <div className="p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
+                                <div className="p-5 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/20 rounded-2xl">
+                                    <p className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-2">Campaign Dupes</p>
+                                    <p className="text-4xl font-extrabold text-rose-900 dark:text-rose-100">{uploadResult.campaignDuplicateCount || 0}</p>
+                                </div>
+                                <div className="p-5 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/20 rounded-2xl">
+                                    <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-2">Invalid Emails</p>
+                                    <p className="text-4xl font-extrabold text-orange-900 dark:text-orange-100">{uploadResult.invalidEmailCount || 0}</p>
+                                </div>
+                                <div className="p-5 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-2xl">
+                                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">CSV Dupes</p>
+                                    <p className="text-4xl font-extrabold text-blue-900 dark:text-blue-100">{uploadResult.internalDuplicateCount}</p>
+                                </div>
+                                <div className="p-5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
                                     <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">DB Duplicates</p>
                                     <p className="text-4xl font-extrabold text-amber-900 dark:text-amber-100">{uploadResult.dbDuplicateCount}</p>
                                 </div>
-                                <div className="p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-2xl">
-                                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">CSV Duplicates</p>
-                                    <p className="text-4xl font-extrabold text-blue-900 dark:text-blue-100">{uploadResult.internalDuplicateCount}</p>
-                                </div>
-                                <div className="p-6 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl">
+                                <div className="p-5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl">
                                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Skipped Rows</p>
                                     <p className="text-4xl font-extrabold text-slate-900 dark:text-slate-100">{uploadResult.skippedCount}</p>
                                 </div>

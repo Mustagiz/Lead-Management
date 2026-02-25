@@ -1,7 +1,20 @@
 -- Enhanced Audit Log Table
 -- Run this in your Supabase SQL Editor
 
--- Add details column to audit_log if not exists
+-- Create audit_log table if it doesn't exist
+CREATE TABLE IF NOT EXISTS audit_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lead_id UUID NOT NULL,
+  qa_id UUID,
+  qa_name TEXT,
+  action TEXT NOT NULL,
+  details TEXT,
+  old_values JSONB,
+  new_values JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add details column to audit_log if not exists (in case table already existed without these)
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS details TEXT;
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS old_values JSONB;
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS new_values JSONB;
@@ -49,19 +62,40 @@ CREATE POLICY "Users can insert own preferences" ON user_preferences
 -- Create function to track lead changes
 CREATE OR REPLACE FUNCTION log_lead_changes()
 RETURNS TRIGGER AS $$
+DECLARE
+  action_type TEXT;
+  details_text TEXT;
+  qa_name_val TEXT;
 BEGIN
-  IF (TG_OP = 'UPDATE') THEN
-    INSERT INTO audit_log (lead_id, qa_id, qa_name, action, old_values, new_values, details)
-    VALUES (
-      NEW.id,
-      auth.uid(),
-      (SELECT name FROM profiles WHERE id = auth.uid()),
-      'updated',
-      to_jsonb(OLD),
-      to_jsonb(NEW),
-      'Lead automatically tracked'
-    );
+  -- Determine action type and details
+  IF (TG_OP = 'INSERT') THEN
+    action_type := 'created';
+    details_text := 'Lead created';
+  ELSIF (TG_OP = 'UPDATE') THEN
+    -- If status changed, use status as action
+    IF (OLD.status IS DISTINCT FROM NEW.status) THEN
+      action_type := NEW.status;
+      details_text := 'Status changed from ' || OLD.status || ' to ' || NEW.status;
+    ELSE
+      action_type := 'updated';
+      details_text := 'Lead updated';
+    END IF;
   END IF;
+
+  -- Get QA name if available
+  SELECT name INTO qa_name_val FROM profiles WHERE id = auth.uid();
+
+  INSERT INTO audit_log (lead_id, qa_id, qa_name, action, old_values, new_values, details)
+  VALUES (
+    NEW.id,
+    auth.uid(),
+    COALESCE(qa_name_val, 'System'),
+    action_type,
+    CASE WHEN TG_OP = 'UPDATE' THEN to_jsonb(OLD) ELSE NULL END,
+    to_jsonb(NEW),
+    details_text
+  );
+  
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -69,7 +103,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Create trigger for automatic lead change tracking
 DROP TRIGGER IF EXISTS track_lead_changes ON leads;
 CREATE TRIGGER track_lead_changes
-  AFTER UPDATE ON leads
+  AFTER INSERT OR UPDATE ON leads
   FOR EACH ROW
   EXECUTE FUNCTION log_lead_changes();
 
