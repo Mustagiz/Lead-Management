@@ -57,6 +57,8 @@ const AdminDashboard = () => {
     const CAMPAIGNS_PER_PAGE = 10;
     const [usersPage, setUsersPage] = useState(1);
     const USERS_PER_PAGE = 10;
+    const [reportsPage, setReportsPage] = useState(1);
+    const REPORTS_PER_PAGE = 10;
 
     const formatTime = (ts) => {
         const h = Math.floor(ts / 3600);
@@ -907,31 +909,44 @@ const AdminDashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
-                                    {campaigns.map(c => {
-                                        const cLeads = leads.filter(l => l.campaign === c.name);
-                                        const qCount = cLeads.filter(l => l.status === 'qualified').length;
-                                        const dCount = cLeads.filter(l => l.status === 'disqualified').length;
-                                        const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
-                                        return (
-                                            <tr key={c.id}>
-                                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{c.name}</td>
-                                                <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{cLeads.length}</td>
-                                                <td className="px-6 py-4 text-green-600 font-semibold">{qCount}</td>
-                                                <td className="px-6 py-4 text-red-600">{dCount}</td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-24 bg-gray-100 dark:bg-slate-800 rounded-full h-2">
-                                                            <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${rate}%` }}></div>
+                                    {campaigns
+                                        .slice((reportsPage - 1) * REPORTS_PER_PAGE, reportsPage * REPORTS_PER_PAGE)
+                                        .map(c => {
+                                            const cLeads = leads.filter(l => l.campaign === c.name);
+                                            const qCount = cLeads.filter(l => l.status === 'qualified').length;
+                                            const dCount = cLeads.filter(l => l.status === 'disqualified').length;
+                                            const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
+                                            return (
+                                                <tr key={c.id}>
+                                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{c.name}</td>
+                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{cLeads.length}</td>
+                                                    <td className="px-6 py-4 text-green-600 font-semibold">{qCount}</td>
+                                                    <td className="px-6 py-4 text-red-600">{dCount}</td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-24 bg-gray-100 dark:bg-slate-800 rounded-full h-2">
+                                                                <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${rate}%` }}></div>
+                                                            </div>
+                                                            <span className="text-sm font-bold dark:text-white">{rate}%</span>
                                                         </div>
-                                                        <span className="text-sm font-bold dark:text-white">{rate}%</span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                 </tbody>
                             </table>
                         </div>
+                        {Math.ceil(campaigns.length / REPORTS_PER_PAGE) > 1 && (
+                            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-800 flex items-center justify-between">
+                                <div className="text-sm text-gray-700 dark:text-gray-400">
+                                    Showing {((reportsPage - 1) * REPORTS_PER_PAGE) + 1} to {Math.min(reportsPage * REPORTS_PER_PAGE, campaigns.length)} of {campaigns.length} campaigns
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="secondary" onClick={() => setReportsPage(p => Math.max(1, p - 1))} disabled={reportsPage === 1}>Previous</Button>
+                                    <Button variant="secondary" onClick={() => setReportsPage(p => Math.min(Math.ceil(campaigns.length / REPORTS_PER_PAGE), p + 1))} disabled={reportsPage === Math.ceil(campaigns.length / REPORTS_PER_PAGE)}>Next</Button>
+                                </div>
+                            </div>
+                        )}
                     </Card>
                 </div>
             )}
