@@ -30,15 +30,33 @@ const QADashboard = () => {
 
 
     const loadLeads = useCallback(async () => {
-        const { data: leadsData, error: leadsError } = await supabase
-            .from('leads')
-            .select('*')
-            .order('created_at', { ascending: false });
+        let allLeads = [];
+        let from = 0;
+        let to = 999;
+        let finishedLeads = false;
 
-        if (!leadsError) {
-            setLeads(leadsData);
-            setFilteredLeads(leadsData);
+        while (!finishedLeads) {
+            const { data: leadsData, error: leadsError } = await supabase
+                .from('leads')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (leadsError || !leadsData || leadsData.length === 0) {
+                finishedLeads = true;
+            } else {
+                allLeads = [...allLeads, ...leadsData];
+                if (leadsData.length < 1000) {
+                    finishedLeads = true;
+                } else {
+                    from += 1000;
+                    to += 1000;
+                }
+            }
         }
+
+        setLeads(allLeads);
+        setFilteredLeads(allLeads);
 
         const { data: campaignsData } = await supabase
             .from('campaigns')
@@ -47,19 +65,39 @@ const QADashboard = () => {
 
         setActiveCampaigns(campaignsData || []);
 
-        const { data: auditLog, error: auditError } = await supabase
-            .from('audit_log')
-            .select('*')
-            .eq('qa_id', currentUser.id);
+        let allAuditLogs = [];
+        let auditFrom = 0;
+        let auditTo = 999;
+        let finishedAudit = false;
 
-        if (!auditError) {
-            setStats({
-                audited: auditLog.length,
-                qualified: auditLog.filter(l => l.action === 'qualified').length,
-                disqualified: auditLog.filter(l => l.action === 'disqualified').length,
-                tbd: auditLog.filter(l => l.action === 'tbd').length
-            });
+        while (!finishedAudit) {
+            const { data: auditLog, error: auditError } = await supabase
+                .from('audit_log')
+                .select('*')
+                .eq('qa_id', currentUser.id)
+                .range(auditFrom, auditTo);
+
+            if (auditError || !auditLog || auditLog.length === 0) {
+                finishedAudit = true;
+            } else {
+                allAuditLogs = [...allAuditLogs, ...auditLog];
+                if (auditLog.length < 1000) {
+                    finishedAudit = true;
+                } else {
+                    auditFrom += 1000;
+                    auditTo += 1000;
+                }
+            }
         }
+
+        const auditLog = allAuditLogs;
+
+        setStats({
+            audited: auditLog.length,
+            qualified: auditLog.filter(l => l.action === 'qualified').length,
+            disqualified: auditLog.filter(l => l.action === 'disqualified').length,
+            tbd: auditLog.filter(l => l.action === 'tbd').length
+        });
     }, [currentUser.id]);
 
     const loadBreakData = useCallback(async () => {
