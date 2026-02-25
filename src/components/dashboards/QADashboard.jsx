@@ -425,8 +425,8 @@ const QADashboard = () => {
                                     { value: 'tbd', label: 'TBD' }
                                 ]}
                             />
-                            <div className="flex flex-col">
-                                <label className="block text-sm font-semibold opacity-0 mb-1.5 select-none text-transparent">Action</label>
+                            <div className="flex flex-col mb-4">
+                                <label className="block text-sm font-semibold opacity-0 mb-1.5 ml-0.5 select-none text-transparent border-none">Spacer</label>
                                 <div className="flex items-center gap-2">
                                     <Button onClick={applyFilters} className="h-[46px] flex-1">
                                         <Filter className="w-4 h-4 mr-2" />
@@ -529,7 +529,29 @@ const QADashboard = () => {
                                 </tbody>
                             </table>
                         </div>
-                        {/* Pagination... */}
+                        <div className="px-6 py-4 bg-gray-50/50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Showing <span className="font-semibold text-gray-900 dark:text-white">{(currentPage - 1) * LEADS_PER_PAGE + 1}</span> to <span className="font-semibold text-gray-900 dark:text-white">{Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)}</span> of <span className="font-semibold text-gray-900 dark:text-white">{filteredLeads.length}</span> leads
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-4 py-2"
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredLeads.length / LEADS_PER_PAGE), prev + 1))}
+                                    disabled={currentPage >= Math.ceil(filteredLeads.length / LEADS_PER_PAGE)}
+                                    className="px-4 py-2"
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
                     </Card>
 
                     {showUploadModal && (
