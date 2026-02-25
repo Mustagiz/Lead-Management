@@ -813,7 +813,7 @@ const EmployeeDashboard = () => {
                     <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
                   {paginatedLeads.map((lead, index) => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDisplayDate(lead.date)}</td>
@@ -852,7 +852,7 @@ const EmployeeDashboard = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-800 flex items-center justify-between">
                 <div className="text-sm text-gray-700">
                   Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
                 </div>
