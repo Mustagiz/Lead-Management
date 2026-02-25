@@ -4,7 +4,7 @@ import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Ba
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
-import { Button, Input, SearchableSelect, Card } from '../common/UIComponents';
+import { Button, Input, SearchableSelect, Card, Badge, StatCard } from '../common/UIComponents';
 import UploadLeadModal from '../modals/UploadLeadModal';
 import UserModal from '../modals/UserModal';
 import CampaignModal from '../modals/CampaignModal';
@@ -428,97 +428,80 @@ const AdminDashboard = () => {
     return (
         <div className="space-y-6">
             <LiveFeedTicker />
-            <div className="flex flex-wrap gap-2 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800">
+            <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50">
                 {[
-                    { id: 'overview', icon: <BarChart3 className="w-4 h-4 mr-2" />, label: 'Overview' },
-                    { id: 'leads', icon: <Users className="w-4 h-4 mr-2" />, label: 'All Leads' },
-                    { id: 'users', icon: <Shield className="w-4 h-4 mr-2" />, label: 'Manage Users' },
-                    { id: 'campaigns', icon: <Plus className="w-4 h-4 mr-2" />, label: 'Campaigns' },
-                    { id: 'breaks', icon: <Coffee className="w-4 h-4 mr-2" />, label: 'Breaks' },
-                    { id: 'reports', icon: <BarChart3 className="w-4 h-4 mr-2" />, label: 'Reports' },
+                    { id: 'overview', icon: BarChart3, label: 'Overview' },
+                    { id: 'leads', icon: Users, label: 'All Leads' },
+                    { id: 'users', icon: Shield, label: 'Manage Users' },
+                    { id: 'campaigns', icon: Plus, label: 'Campaigns' },
+                    { id: 'breaks', icon: Coffee, label: 'Breaks' },
+                    { id: 'reports', icon: BarChart3, label: 'Reports' },
                 ].map(tab => (
                     <Button
                         key={tab.id}
-                        variant={activeTab === tab.id ? 'primary' : 'secondary'}
+                        variant={activeTab === tab.id ? 'primary' : 'ghost'}
                         onClick={() => setActiveTab(tab.id)}
-                        className="flex-1 md:flex-none"
+                        className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === tab.id ? 'shadow-lg shadow-indigo-500/20' : ''}`}
+                        icon={tab.icon}
                     >
-                        {tab.icon}
                         {tab.label}
                     </Button>
                 ))}
             </div>
 
             {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card className="p-6 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 dark:bg-blue-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                        <div className="relative flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Total Leads</p>
-                                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalLeads}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 dark:shadow-none">
-                                <BarChart3 className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card className="p-6 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 dark:bg-green-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                        <div className="relative flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Qualified</p>
-                                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.qualified}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200 dark:shadow-none">
-                                <CheckCircle className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card className="p-6 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 dark:bg-red-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                        <div className="relative flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Disqualified</p>
-                                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.disqualified}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200 dark:shadow-none">
-                                <XCircle className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card className="p-6 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 dark:bg-purple-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                        <div className="relative flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Active Breaks</p>
-                                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.activeBreaks}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200 dark:shadow-none">
-                                <Coffee className="w-6 h-6 text-white" />
-                            </div>
-                        </div>
-                    </Card>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <StatCard
+                        label="Total Leads"
+                        value={stats.totalLeads || 0}
+                        icon={BarChart3}
+                        color="indigo"
+                    />
+                    <StatCard
+                        label="Qualified"
+                        value={stats.qualified || 0}
+                        icon={CheckCircle}
+                        color="emerald"
+                        trend="up"
+                        trendValue="12"
+                    />
+                    <StatCard
+                        label="Disqualified"
+                        value={stats.disqualified || 0}
+                        icon={XCircle}
+                        color="rose"
+                    />
+                    <StatCard
+                        label="Active Breaks"
+                        value={stats.activeBreaks || 0}
+                        icon={Coffee}
+                        color="amber"
+                    />
                 </div>
             )}
 
             {activeTab === 'leads' && (
                 <div className="space-y-6">
-                    <Card className="p-6">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Filters</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card className="p-8 border-none shadow-xl shadow-slate-200/50 dark:shadow-indigo-900/20">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white font-display">Advanced Filters</h3>
+                                <p className="text-sm text-slate-500 font-medium">Refine your lead view by various criteria</p>
+                            </div>
+                            <Button variant="ghost" onClick={handleClearFilters} className="text-indigo-600 dark:text-indigo-400 font-bold" icon={RefreshCw}>
+                                Reset
+                            </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                             <Input label="Start Date" type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
                             <Input label="End Date" type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
-                            <SearchableSelect label="Agent" value={filters.agent} onChange={(e) => setFilters({ ...filters, agent: e.target.value })} options={users.filter(u => u.name).map(u => ({ value: u.name, label: u.name }))} />
-                            <SearchableSelect label="Campaign" value={filters.campaign} onChange={(e) => setFilters({ ...filters, campaign: e.target.value })} options={campaigns.filter(c => c.name).map(c => ({ value: c.name, label: c.name }))} />
+                            <SearchableSelect label="Agent" value={filters.agent} onChange={(e) => setFilters({ ...filters, agent: e.target.value })} options={users.filter(u => u.name).map(u => ({ value: u.name, label: u.name }))} placeholder="Search agents..." />
+                            <SearchableSelect label="Campaign" value={filters.campaign} onChange={(e) => setFilters({ ...filters, campaign: e.target.value })} options={campaigns.filter(c => c.name).map(c => ({ value: c.name, label: c.name }))} placeholder="Search campaigns..." />
                             <SearchableSelect
                                 label="Status"
                                 value={filters.status}
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                                placeholder="Select status..."
+                                placeholder="All Statuses"
                                 options={[
                                     { value: 'pending', label: 'Pending' },
                                     { value: 'qualified', label: 'Qualified' },
@@ -528,18 +511,28 @@ const AdminDashboard = () => {
                                     { value: 'dnc', label: 'DNC' }
                                 ]}
                             />
-                            <div className="flex pt-4 items-end gap-2 md:col-span-4 lg:col-span-1">
-                                <Button onClick={applyFilters} className="flex-1"><Filter className="w-4 h-4 mr-2" /> Apply</Button>
+                        </div>
+                        <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-4 items-center justify-between">
+                            <div className="flex gap-3">
                                 <Button
                                     variant={filters.onlyStale ? 'primary' : 'secondary'}
                                     onClick={() => setFilters({ ...filters, onlyStale: !filters.onlyStale })}
-                                    title="Stale Leads (>48h)"
+                                    className="px-4 py-2"
+                                    icon={AlertTriangle}
                                 >
-                                    <AlertTriangle className={`w-4 h-4 ${filters.onlyStale ? 'animate-pulse' : ''}`} />
+                                    Stale Leads
                                 </Button>
-                                <Button variant="secondary" onClick={handleClearFilters}><RefreshCw className="w-4 h-4" /></Button>
-                                <Button variant="secondary" onClick={downloadLeads}><Download className="w-4 h-4" /></Button>
-                                <Button onClick={() => setShowUploadModal(true)}><Upload className="w-4 h-4" /></Button>
+                                <Button variant="secondary" onClick={downloadLeads} className="px-4 py-2" icon={Download}>
+                                    Export CSV
+                                </Button>
+                            </div>
+                            <div className="flex gap-3">
+                                <Button onClick={() => setShowUploadModal(true)} variant="secondary" className="px-6" icon={Upload}>
+                                    Bulk Import
+                                </Button>
+                                <Button onClick={applyFilters} className="px-8 shadow-indigo-500/20" icon={Filter}>
+                                    Apply Filters
+                                </Button>
                             </div>
                         </div>
                     </Card>
@@ -594,12 +587,22 @@ const AdminDashboard = () => {
                                                         onChange={() => handleSelectLead(lead.id)}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{formatDisplayDate(lead.date)}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{lead.campaign}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{lead.ra_name}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{lead.company_name}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${lead.status === 'qualified' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{lead.status}</span>
+                                                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{formatDisplayDate(lead.date)}</span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium dark:text-slate-400">{lead.campaign}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium dark:text-slate-400">{lead.ra_name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-bold text-slate-900 dark:text-white">{lead.company_name}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <Badge variant={
+                                                        lead.status === 'qualified' ? 'success' :
+                                                            lead.status === 'disqualified' ? 'danger' :
+                                                                lead.status === 'pending' ? 'warning' : 'info'
+                                                    }>
+                                                        {lead.status}
+                                                    </Badge>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                     <div className="flex items-center gap-3">

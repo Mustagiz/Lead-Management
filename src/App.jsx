@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Key, LogOut } from 'lucide-react';
+import { BarChart3, Key, LogOut, Moon, Sun, Monitor, User } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import EmployeeDashboard from './components/dashboards/EmployeeDashboard';
 import QADashboard from './components/dashboards/QADashboard';
 import AdminDashboard from './components/dashboards/AdminDashboard';
 import ChangePasswordModal from './components/modals/ChangePasswordModal';
-import { Button, Card } from './components/common/UIComponents';
-import LoginPage from './components/auth/LoginPage'; // I should also extract LoginPage if I haven't
+import { Button, Card, Badge } from './components/common/UIComponents';
+import LoginPage from './components/auth/LoginPage';
 
 // Error Boundary
 class ErrorBoundary extends React.Component {
@@ -19,10 +19,14 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
-          <Card className="max-w-md p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
-            <Button onClick={() => window.location.reload()}>Reload Page</Button>
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+          <Card className="max-w-md p-8 text-center glass">
+            <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Monitor className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2 font-display">Something went wrong</h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">We encountered an unexpected error. Please try reloading the page.</p>
+            <Button onClick={() => window.location.reload()} className="w-full">Reload Application</Button>
           </Card>
         </div>
       );
@@ -49,50 +53,72 @@ const MainLayout = () => {
   }, [darkMode]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
-      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 sticky top-0 z-40 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500 relative overflow-hidden">
+      {/* Background Decorations */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-[120px] animate-blob"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 dark:bg-purple-500/5 rounded-full blur-[120px] animate-blob delay-2000"></div>
+
+      <header className="sticky top-0 z-40 w-full glass border-b border-white/20 dark:border-slate-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-4 group cursor-pointer">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-105 transition-transform duration-300">
-                <BarChart3 className="w-7 h-7 text-white" />
+              <div className="w-11 h-11 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
+                <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
-                  Lead Manager Pro
+                <h1 className="text-xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent tracking-tight font-display">
+                  LeadManager<span className="text-slate-900 dark:text-white">Pro</span>
                 </h1>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{currentUser.role} NODE ACTIVE</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{currentUser.role} NODE ACTIVE</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{currentUser.name}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">{currentUser.username}</p>
+            <div className="flex items-center gap-2 sm:gap-6">
+              <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-white/40 dark:bg-slate-800/40 rounded-2xl border border-white/20 dark:border-slate-700/50">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                  <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{currentUser.name}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{currentUser.username}</p>
+                </div>
               </div>
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-                title="Toggle Dark Mode"
-              >
-                {darkMode ? '🌞' : '🌙'}
-              </button>
-              <Button variant="secondary" onClick={() => setShowChangePassword(true)} className="px-3">
-                <Key className="w-4 h-4" />
-              </Button>
-              <Button onClick={logout} className="bg-red-50 dark:bg-red-900/10 hover:bg-red-600 text-red-600 hover:text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all duration-300">
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
-              </Button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2.5 rounded-xl bg-white/40 dark:bg-slate-800/40 border border-white/20 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-800 transition-all group shadow-sm"
+                  title="Toggle Theme"
+                >
+                  {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
+                </button>
+
+                <button
+                  onClick={() => setShowChangePassword(true)}
+                  className="p-2.5 rounded-xl bg-white/40 dark:bg-slate-800/40 border border-white/20 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-800 transition-all group shadow-sm"
+                  title="Security"
+                >
+                  <Key className="w-4 h-4 text-slate-600 dark:text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                </button>
+
+                <Button
+                  onClick={logout}
+                  variant="danger"
+                  className="sm:px-4 px-3 py-2 sm:py-2.5 rounded-xl shadow-lg shadow-rose-500/10"
+                >
+                  <LogOut className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 animate-fade-in">
         {currentUser.role === 'employee' && <EmployeeDashboard />}
         {currentUser.role === 'qa' && <QADashboard />}
         {currentUser.role === 'admin' && <AdminDashboard />}
@@ -102,9 +128,23 @@ const MainLayout = () => {
         <ChangePasswordModal user={currentUser} onClose={() => setShowChangePassword(false)} />
       )}
 
-      <footer className="bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 mt-12 py-8">
-        <div className="max-w-7xl mx-auto px-6 text-center text-gray-400 text-xs font-medium">
-          © 2026 Outvying Global. All rights reserved.
+      <footer className="mt-auto py-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="border-t border-slate-200 dark:border-slate-800/50 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-display font-bold text-slate-900 dark:text-white">LeadManagerPro</span>
+            </div>
+            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest text-center">
+              © 2026 Outvying Global • Built for Performance
+            </p>
+            <div className="flex gap-4">
+              <Badge variant="neutral">v1.2.0</Badge>
+              <Badge variant="success">System Online</Badge>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
@@ -116,30 +156,21 @@ const AppContent = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
-        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 bg-indigo-500 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // LoginPage logic is complex, should be extracted
   return currentUser ? <MainLayout /> : <LoginPage />;
 };
 
 const App = () => {
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes blob {
-        0%, 100% { transform: translate(0, 0) scale(1); }
-        33% { transform: translate(30px, -50px) scale(1.1); }
-        66% { transform: translate(-20px, 20px) scale(0.9); }
-      }
-      .animate-blob { animation: blob 7s infinite; }
-    `;
-    document.head.appendChild(style);
-  }, []);
-
   return (
     <ErrorBoundary>
       <AuthProvider>

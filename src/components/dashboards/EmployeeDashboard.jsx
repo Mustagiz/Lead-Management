@@ -3,7 +3,7 @@ import { Coffee, BarChart3, CheckCircle, XCircle, Clock, Filter, Search, Refresh
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
-import { Button, Input, SearchableSelect, Card } from '../common/UIComponents';
+import { Button, Input, SearchableSelect, Card, Badge, StatCard } from '../common/UIComponents';
 import UploadLeadModal from '../modals/UploadLeadModal';
 
 const EmployeeDashboard = () => {
@@ -277,173 +277,102 @@ const EmployeeDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex gap-4 border-b border-gray-200 dark:border-slate-800">
-                <button
+            <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50">
+                <Button
+                    variant={activeTab === 'leads' ? 'primary' : 'ghost'}
                     onClick={() => setActiveTab('leads')}
-                    className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'leads'
-                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                        }`}
+                    className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'leads' ? 'shadow-lg shadow-indigo-500/20' : ''}`}
+                    icon={Users}
                 >
                     My Leads
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant={activeTab === 'breaks' ? 'primary' : 'ghost'}
                     onClick={() => setActiveTab('breaks')}
-                    className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'breaks'
-                        ? 'border-purple-600 text-purple-600 dark:text-purple-400'
-                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                        }`}
+                    className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'breaks' ? 'shadow-lg shadow-purple-500/20' : ''}`}
+                    icon={Coffee}
                 >
-                    <Coffee className="w-4 h-4 inline mr-2" />
                     Break Management
-                </button>
+                </Button>
             </div>
 
             {activeTab === 'leads' && (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                        <Card className="p-6 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 dark:bg-blue-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                            <div className="relative flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Total Leads</p>
-                                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-                                </div>
-                                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 dark:shadow-none">
-                                    <BarChart3 className="w-6 h-6 text-white" />
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="p-6 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 dark:bg-green-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                            <div className="relative flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Qualified</p>
-                                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.qualified}</p>
-                                </div>
-                                <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200 dark:shadow-none">
-                                    <CheckCircle className="w-6 h-6 text-white" />
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="p-6 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 dark:bg-red-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                            <div className="relative flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Disqualified</p>
-                                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.disqualified}</p>
-                                </div>
-                                <div className="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200 dark:shadow-none">
-                                    <XCircle className="w-6 h-6 text-white" />
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="p-6 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-50 dark:bg-yellow-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
-                            <div className="relative flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Pending</p>
-                                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
-                                </div>
-                                <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200 dark:shadow-none">
-                                    <Clock className="w-6 h-6 text-white" />
-                                </div>
-                            </div>
-                        </Card>
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard label="Total Leads" value={stats.total} icon={BarChart3} color="indigo" />
+                        <StatCard label="Qualified" value={stats.qualified} icon={CheckCircle} color="emerald" trend="up" trendValue={(stats.qualified / (stats.total || 1) * 100).toFixed(0)} />
+                        <StatCard label="Disqualified" value={stats.disqualified} icon={XCircle} color="rose" />
+                        <StatCard label="Pending" value={stats.pending} icon={Clock} color="amber" />
                     </div>
 
-                    <Card className="p-6">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                            <Filter className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
-                            Filter Leads
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <Input
-                                label="Start Date"
-                                type="date"
-                                value={filters.startDate}
-                                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                            />
-                            <Input
-                                label="End Date"
-                                type="date"
-                                value={filters.endDate}
-                                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                            />
-                            <SearchableSelect
-                                label="Campaign Name"
-                                value={filters.campaign}
-                                onChange={(e) => setFilters({ ...filters, campaign: e.target.value })}
-                                placeholder="Search campaign..."
-                                options={campaigns.filter(c => c.is_active).map(c => ({ value: c.name, label: c.name }))}
-                            />
-                            <div className="flex items-end pb-4 gap-2">
-                                <Button onClick={applyFilters} className="flex-1">
-                                    <Search className="w-4 h-4 mr-2" />
-                                    Apply
-                                </Button>
-                                <Button variant="secondary" onClick={handleClearFilters} className="px-3">
-                                    <RefreshCw className="w-4 h-4" />
-                                </Button>
-                                <Button variant="secondary" onClick={downloadLeads} className="px-3">
-                                    <Download className="w-4 h-4" />
-                                </Button>
+                    <Card className="p-8 border-none shadow-xl shadow-slate-200/50 dark:shadow-indigo-900/10">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white font-display">Lead Portfolio</h3>
+                                <p className="text-sm text-slate-500 font-medium">Quickly locate specific leads in your records</p>
+                            </div>
+                            <Button variant="ghost" onClick={handleClearFilters} icon={RefreshCw}>
+                                Reset
+                            </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <Input label="From Date" type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
+                            <Input label="To Date" type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
+                            <SearchableSelect label="Campaign Name" value={filters.campaign} onChange={(e) => setFilters({ ...filters, campaign: e.target.value })} options={campaigns.map(c => ({ value: c.name, label: c.name }))} placeholder="Search campaigns..." />
+                            <div className="md:pt-6 pt-0 flex gap-3">
+                                <Button onClick={() => setShowUploadModal(true)} variant="secondary" className="flex-1" icon={Upload}>Upload</Button>
+                                <Button onClick={applyFilters} className="flex-1 shadow-indigo-500/20" icon={Filter}>Filter</Button>
                             </div>
                         </div>
                     </Card>
 
-                    <div className="flex justify-end">
-                        <Button onClick={() => setShowUploadModal(true)}>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Upload Leads
-                        </Button>
+                    <div className="flex justify-between items-center px-4">
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Recent Records</h4>
+                        <Button variant="ghost" onClick={downloadLeads} icon={Download}>Export CSV</Button>
                     </div>
 
-                    <Card className="overflow-hidden">
+                    <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50 dark:shadow-indigo-900/10">
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-50/80 dark:bg-slate-800/80 border-b border-gray-100 dark:border-slate-700">
+                                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                                     <tr>
-                                        <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                                        <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Campaign</th>
-                                        <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-                                        <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contact</th>
-                                        <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-                                        <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                        <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Date</th>
+                                        <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Campaign</th>
+                                        <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Company</th>
+                                        <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Contact</th>
+                                        <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Status</th>
+                                        <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {paginatedLeads.map((lead) => (
-                                        <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{formatDisplayDate(lead.date)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{lead.campaign || '-'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{lead.company_name}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                                {lead.salutation} {lead.first_name} {lead.last_name}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{lead.email}</td>
+                                        <tr key={lead.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">{formatDisplayDate(lead.date)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">{lead.campaign || '-'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">{lead.company_name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/20' :
-                                                    lead.status === 'disqualified' ? 'bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/20' :
-                                                        'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
-                                                    } uppercase`}>
-                                                    {lead.status}
-                                                </span>
+                                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{lead.first_name} {lead.last_name}</div>
+                                                <div className="text-[11px] text-slate-400">{lead.email}</div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                <button
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <Badge variant={
+                                                    lead.status === 'qualified' ? 'success' :
+                                                        lead.status === 'disqualified' ? 'danger' :
+                                                            lead.status === 'pending' ? 'warning' : 'info'
+                                                }>
+                                                    {lead.status}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                                <Button
+                                                    variant="ghost"
                                                     onClick={() => {
                                                         setSelectedLead(lead);
                                                         setShowUploadModal(true);
                                                     }}
-                                                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-white transition-colors"
-                                                >
-                                                    <Eye className="w-5 h-5" />
-                                                </button>
+                                                    className="p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    icon={Eye}
+                                                />
                                             </td>
                                         </tr>
                                     ))}
@@ -452,22 +381,24 @@ const EmployeeDashboard = () => {
                         </div>
 
                         {totalPages > 1 && (
-                            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-800 flex items-center justify-between">
-                                <div className="text-sm text-gray-700 dark:text-gray-400">
-                                    Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
-                                </div>
+                            <div className="px-6 py-6 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                    Page {currentPage} of {totalPages}
+                                </p>
                                 <div className="flex gap-2">
                                     <Button
                                         variant="secondary"
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
+                                        className="py-1 px-4"
                                     >
-                                        Previous
+                                        Prev
                                     </Button>
                                     <Button
                                         variant="secondary"
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
+                                        className="py-1 px-4"
                                     >
                                         Next
                                     </Button>
@@ -475,93 +406,89 @@ const EmployeeDashboard = () => {
                             </div>
                         )}
                     </Card>
-
-                    {showUploadModal && (
-                        <UploadLeadModal
-                            onClose={() => {
-                                setShowUploadModal(false);
-                                setSelectedLead(null);
-                            }}
-                            onSuccess={loadLeads}
-                            employeeId={currentUser.id}
-                            employeeName={currentUser.name}
-                            leadToEdit={selectedLead}
-                        />
-                    )}
-                </>
+                </div>
             )}
 
             {activeTab === 'breaks' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/10 border-purple-200 dark:border-purple-800/30">
-                        <div className="flex flex-col justify-center">
-                            <div className="flex items-center justify-between mb-4">
-                                <p className="text-sm font-semibold text-purple-600 dark:text-purple-400">Active Break Status</p>
-                                <Coffee className={`w-6 h-6 ${onBreak ? 'text-purple-600 animate-pulse' : 'text-gray-400'}`} />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <Card className="lg:col-span-1 p-8 bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-none shadow-2xl shadow-indigo-500/20">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-lg font-black font-display uppercase tracking-widest text-indigo-100">Control Panel</h3>
+                            <div className={`p-2 rounded-xl bg-white/10 ${onBreak ? 'animate-pulse' : ''}`}>
+                                <Coffee className="w-5 h-5 text-white" />
                             </div>
-                            <p className="text-4xl font-bold text-purple-900 dark:text-purple-100 mb-2">
+                        </div>
+
+                        <div className="text-center py-8">
+                            <p className="text-sm font-bold text-indigo-100/60 uppercase tracking-[0.2em] mb-2">Duration</p>
+                            <h2 className="text-6xl font-black font-display tracking-tight mb-8">
                                 {onBreak ? formatTime(currentBreakDuration) : "00:00"}
-                            </p>
-                            <p className="text-sm text-purple-600 dark:text-purple-300 mb-6">
-                                {onBreak ? "Break in progress..." : "Ready to start break"}
-                            </p>
+                            </h2>
+
                             <Button
-                                variant={onBreak ? 'danger' : 'primary'}
+                                variant={onBreak ? 'danger' : 'glass'}
                                 onClick={handleBreakToggle}
-                                className="w-full py-4 text-lg"
+                                className={`w-full py-4 text-lg shadow-xl ${onBreak ? 'shadow-rose-500/20' : 'shadow-black/10'}`}
+                                icon={Coffee}
                             >
-                                <Coffee className="w-5 h-5 mr-2" />
-                                {onBreak ? 'End Break' : 'Start Break'}
+                                {onBreak ? 'End Session' : 'Begin Break'}
                             </Button>
+                        </div>
+
+                        <div className="mt-8 pt-8 border-t border-white/10 grid grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-[10px] font-bold text-indigo-100/60 uppercase tracking-widest mb-1">Daily Total</p>
+                                <p className="text-xl font-bold">{formatTime(totalBreakTime)}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-bold text-indigo-100/60 uppercase tracking-widest mb-1">Sessions</p>
+                                <p className="text-xl font-bold">{breakHistory.length}</p>
+                            </div>
                         </div>
                     </Card>
 
-                    <Card className="p-6 md:col-span-2">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Today's Summary</h3>
-                            <div className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                                <p className="text-xs text-purple-600 dark:text-purple-400 font-semibold uppercase tracking-wider">Total Break Time</p>
-                                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{formatTime(totalBreakTime)}</p>
-                            </div>
-                        </div>
-
+                    <Card className="lg:col-span-2 p-8 border-none shadow-xl shadow-slate-200/50 dark:shadow-indigo-900/10">
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white font-display mb-8">Today's Sessions</h3>
                         {breakHistory.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50 dark:bg-slate-800">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">#</th>
-                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Start</th>
-                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">End</th>
-                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Duration</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                        {breakHistory.map((breakItem, index) => (
-                                            <tr key={index}>
-                                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{index + 1}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                                    {new Date(breakItem.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                                    {new Date(breakItem.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm font-semibold text-purple-600 dark:text-purple-400">
-                                                    {formatTime(breakItem.durationSeconds || breakItem.duration * 60)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="space-y-4">
+                                {breakHistory.map((b, i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 group hover:border-indigo-500/30 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm">
+                                                <Clock className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900 dark:text-white">Break {i + 1}</p>
+                                                <p className="text-xs text-slate-500 font-medium">
+                                                    {new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {b.endTime ? new Date(b.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'In Progress'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="info" className="px-4">{formatTime(b.durationSeconds)}</Badge>
+                                    </div>
+                                ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12">
-                                <Coffee className="w-8 h-8 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-500">No break records for today.</p>
+                            <div className="h-64 flex flex-col items-center justify-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                                <Coffee className="w-12 h-12 mb-4 opacity-10" />
+                                <p className="text-sm font-medium">No sessions recorded today</p>
                             </div>
                         )}
                     </Card>
                 </div>
+            )}
+
+            {showUploadModal && (
+                <UploadLeadModal
+                    onClose={() => {
+                        setShowUploadModal(false);
+                        setSelectedLead(null);
+                    }}
+                    onSuccess={loadLeads}
+                    employeeId={currentUser.id}
+                    employeeName={currentUser.name}
+                    leadToEdit={selectedLead}
+                />
             )}
         </div>
     );

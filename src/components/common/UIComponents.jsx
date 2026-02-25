@@ -1,54 +1,78 @@
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 
-export const Button = ({ children, variant = 'primary', onClick, disabled, className = '', type = 'button' }) => {
-    const baseStyles = 'px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-sm';
+export const Button = ({ children, variant = 'primary', onClick, disabled, isLoading, className = '', type = 'button', icon: Icon }) => {
+    const baseStyles = 'relative px-6 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-sm overflow-hidden group';
+
     const variants = {
-        primary: 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white hover:from-indigo-700 hover:to-indigo-800 hover:shadow-indigo-200 dark:hover:shadow-indigo-900/20 hover:shadow-lg',
-        secondary: 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-md',
-        danger: 'bg-rose-500 text-white hover:bg-rose-600 hover:shadow-rose-100 dark:hover:shadow-rose-900/20 hover:shadow-lg',
-        ghost: 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+        primary: 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white hover:shadow-indigo-500/25 dark:hover:shadow-indigo-900/40 hover:shadow-xl hover:-translate-y-0.5',
+        secondary: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md',
+        danger: 'bg-gradient-to-br from-rose-500 to-red-600 text-white hover:shadow-rose-500/25 hover:shadow-xl hover:-translate-y-0.5',
+        ghost: 'bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
+        glass: 'glass text-slate-900 dark:text-white hover:bg-white/40 dark:hover:bg-slate-800/40 border-white/20'
     };
 
     return (
         <button
             type={type}
             onClick={onClick}
-            disabled={disabled}
+            disabled={disabled || isLoading}
             className={`${baseStyles} ${variants[variant]} ${className}`}
         >
-            {children}
+            {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+                <>
+                    {Icon && <Icon className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />}
+                    {children}
+                </>
+            )}
         </button>
     );
 };
 
-export const Input = ({ label, error, ...props }) => (
-    <div className="mb-4">
-        {label && <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-0.5">{label}</label>}
-        <input
-            {...props}
-            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/20 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-white outline-none shadow-sm ${error ? 'border-rose-300 dark:border-rose-500/50 ring-2 ring-rose-50 dark:ring-rose-900/20' : 'border-gray-200 dark:border-slate-700'}`}
-        />
-        {error && <p className="mt-1.5 text-xs font-medium text-rose-500 ml-0.5 animate-in fade-in slide-in-from-top-1">{error}</p>}
+export const Input = ({ label, error, icon: Icon, ...props }) => (
+    <div className="w-full">
+        {label && <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{label}</label>}
+        <div className="relative group">
+            {Icon && (
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                    <Icon className="w-4 h-4" />
+                </div>
+            )}
+            <input
+                {...props}
+                className={`w-full ${Icon ? 'pl-11' : 'px-4'} py-3 bg-white dark:bg-slate-900/50 border dark:border-slate-800 rounded-xl focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/5 focus:border-indigo-500 dark:focus:border-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 text-slate-900 dark:text-slate-100 outline-none shadow-sm ${error ? 'border-rose-500 ring-rose-500/10' : 'border-slate-200 hover:border-slate-300 dark:hover:border-slate-700'}`}
+            />
+        </div>
+        {error && <p className="mt-1.5 text-xs font-semibold text-rose-500 ml-1 flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+            <span className="w-1 h-1 rounded-full bg-rose-500"></span>
+            {error}
+        </p>}
     </div>
 );
 
 export const Select = ({ label, options, error, ...props }) => (
-    <div className="mb-4">
-        {label && <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-0.5">{label}</label>}
-        <select
-            {...props}
-            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/20 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all outline-none shadow-sm appearance-none cursor-pointer text-gray-900 dark:text-white ${error ? 'border-rose-300 dark:border-rose-500/50 ring-2 ring-rose-50 dark:ring-rose-900/20' : 'border-gray-200 dark:border-slate-700'}`}
-        >
-            {options.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-        </select>
-        {error && <p className="mt-1.5 text-xs font-medium text-rose-500 ml-0.5 animate-in fade-in slide-in-from-top-1">{error}</p>}
+    <div className="w-full">
+        {label && <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{label}</label>}
+        <div className="relative">
+            <select
+                {...props}
+                className={`w-full px-4 py-3 bg-white dark:bg-slate-900/50 border dark:border-slate-800 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none shadow-sm appearance-none cursor-pointer text-slate-900 dark:text-slate-100 ${error ? 'border-rose-500 ring-rose-500/10' : 'border-slate-200 dark:border-slate-800'}`}
+            >
+                {options.map(opt => (
+                    <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-900">{opt.label}</option>
+                ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 transition-transform group-focus-within:rotate-180">
+                <ChevronDown className="w-4 h-4" />
+            </div>
+        </div>
+        {error && <p className="mt-1.5 text-xs font-semibold text-rose-500 ml-1 animate-in fade-in slide-in-from-top-1">{error}</p>}
     </div>
 );
 
-export const SearchableSelect = ({ label, value, onChange, options, placeholder }) => {
+export const SearchableSelect = ({ label, value, onChange, options, placeholder, error }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     const filteredOptions = options.filter(opt =>
@@ -61,42 +85,89 @@ export const SearchableSelect = ({ label, value, onChange, options, placeholder 
     };
 
     return (
-        <div className="mb-4 relative">
-            {label && <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-0.5">{label}</label>}
+        <div className="w-full relative group">
+            {label && <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{label}</label>}
             <div className="relative">
                 <input
                     type="text"
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all pr-10 text-gray-900 dark:text-white"
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-900/50 border dark:border-slate-800 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none shadow-sm text-slate-900 dark:text-slate-100 ${error ? 'border-rose-500' : 'border-slate-200 dark:border-slate-800'}`}
                     placeholder={placeholder}
                     value={value}
                     onChange={onChange}
                     onFocus={() => setIsOpen(true)}
                     onBlur={() => setTimeout(() => setIsOpen(false), 200)}
                 />
-                <div className="absolute right-3 top-3 pointer-events-none text-gray-400 dark:text-gray-500">
-                    <ChevronDown className="w-4 h-4" />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
                 </div>
             </div>
 
             {isOpen && filteredOptions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {filteredOptions.map(opt => (
-                        <li
-                            key={opt.value}
-                            className="px-4 py-2 hover:bg-indigo-50 dark:hover:bg-slate-700 cursor-pointer text-gray-700 dark:text-gray-200 text-sm"
-                            onClick={() => handleSelect(opt.value)}
-                        >
-                            {opt.label}
-                        </li>
-                    ))}
-                </ul>
+                <div className="absolute z-50 w-full mt-2 glass rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200 border border-slate-200/50 dark:border-slate-700/50">
+                    <ul className="max-h-60 overflow-y-auto py-2">
+                        {filteredOptions.map(opt => (
+                            <li
+                                key={opt.value}
+                                className="px-4 py-2.5 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-600 transition-colors cursor-pointer text-slate-700 dark:text-slate-300 text-sm font-medium"
+                                onClick={() => handleSelect(opt.value)}
+                            >
+                                {opt.label}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
             )}
         </div>
     );
 };
 
-export const Card = ({ children, className = '' }) => (
-    <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`}>
+export const Card = ({ children, className = '', glass = false }) => (
+    <div className={`rounded-3xl border transition-all duration-300 ${glass ? 'glass' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm'} ${className}`}>
         {children}
     </div>
 );
+
+export const Badge = ({ children, variant = 'primary' }) => {
+    const variants = {
+        primary: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800',
+        success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800',
+        warning: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-100 dark:border-amber-800',
+        danger: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-100 dark:border-rose-800',
+        info: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 border-sky-100 dark:border-sky-800',
+        neutral: 'bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400 border-slate-100 dark:border-slate-800'
+    };
+    return (
+        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${variants[variant]}`}>
+            {children}
+        </span>
+    );
+};
+
+export const StatCard = ({ label, value, icon: Icon, trend, trendValue, color = 'indigo' }) => {
+    const colors = {
+        indigo: 'from-indigo-500 to-indigo-600 shadow-indigo-200/50 dark:shadow-indigo-900/20',
+        emerald: 'from-emerald-500 to-emerald-600 shadow-emerald-200/50 dark:shadow-emerald-900/20',
+        amber: 'from-amber-500 to-amber-600 shadow-amber-200/50 dark:shadow-amber-900/20',
+        rose: 'from-rose-500 to-rose-600 shadow-rose-200/50 dark:shadow-rose-900/20'
+    };
+
+    return (
+        <Card className="p-6 relative overflow-hidden group hover:scale-[1.02] transform transition-all duration-300">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-slate-50 dark:bg-slate-800/50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+            <div className="relative z-10">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colors[color]} flex items-center justify-center mb-4 shadow-lg group-hover:rotate-6 transition-transform duration-300`}>
+                    {Icon && <Icon className="w-6 h-6 text-white" />}
+                </div>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                <div className="flex items-end gap-2">
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white font-display leading-none">{value}</h3>
+                    {trendValue && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md mb-0.5 ${trend === 'up' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                            {trend === 'up' ? '+' : '-'}{trendValue}%
+                        </span>
+                    )}
+                </div>
+            </div>
+        </Card>
+    );
+};
