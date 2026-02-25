@@ -2526,7 +2526,7 @@ const QADashboard = () => {
           <Card className="overflow-hidden border-none shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50/80 border-b border-gray-100">
+                <thead className="bg-gray-50/80 dark:bg-slate-800/80 border-b border-gray-100 dark:border-slate-700">
                   <tr>
                     <th className="px-6 py-5">
                       <input
@@ -2551,7 +2551,7 @@ const QADashboard = () => {
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
                   {paginatedLeads.map(lead => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
@@ -2619,7 +2619,7 @@ const QADashboard = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-800 flex items-center justify-between">
                 <div className="text-sm text-gray-700">
                   Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
                 </div>
@@ -3364,8 +3364,8 @@ const AdminDashboard = () => {
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
               <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Total Leads</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalLeads}</p>
+                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Total Leads</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalLeads}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
                   <BarChart3 className="w-6 h-6 text-white" />
@@ -3403,8 +3403,8 @@ const AdminDashboard = () => {
               <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
               <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Active Breaks</p>
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Active Breaks</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {allBreaks.filter(b => b.current_break_start).length}
                   </p>
                 </div>
