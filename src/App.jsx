@@ -686,8 +686,8 @@ const EmployeeDashboard = () => {
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
               <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Total Leads</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Total Leads</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
                   <BarChart3 className="w-6 h-6 text-white" />
@@ -725,8 +725,8 @@ const EmployeeDashboard = () => {
               <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-50 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
               <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1 uppercase tracking-wider">Pending</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.pending}</p>
+                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Pending</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-200">
                   <Clock className="w-6 h-6 text-white" />
@@ -737,8 +737,8 @@ const EmployeeDashboard = () => {
 
           {/* Filters */}
           <Card className="p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-              <Filter className="w-5 h-5 mr-2 text-indigo-600" />
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+              <Filter className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
               Filter Leads
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
