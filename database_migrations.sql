@@ -14,14 +14,20 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Add details column to audit_log if not exists (in case table already existed without these)
+-- Add missing columns to existing tables if they don't exist
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS details TEXT;
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS old_values JSONB;
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS new_values JSONB;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Ensure leads table has created_at (common source of errors if missing)
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_audit_log_lead_id ON audit_log(lead_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
 
 -- Create automated backup function (Point-in-time recovery)
 CREATE OR REPLACE FUNCTION create_daily_backup()
