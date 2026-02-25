@@ -1,5 +1,18 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
+
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Create a non-persistent client for user management to avoid auto-login
+const supabaseAccountManager = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+    }
+});
 
 const AuthContext = createContext();
 
@@ -95,7 +108,7 @@ export const AuthProvider = ({ children }) => {
             throw new Error('A profile with this email already exists in the management system.');
         }
 
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await supabaseAccountManager.auth.signUp({
             email,
             password,
             options: { data: { name, role } }
