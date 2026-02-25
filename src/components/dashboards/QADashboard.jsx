@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Coffee, CheckCircle, Check, X, Filter, RefreshCw, Download, Upload, Edit, LogOut } from 'lucide-react';
+import { Coffee, CheckCircle, Check, X, Filter, RefreshCw, Download, Upload, Edit, LogOut, Clock } from 'lucide-react';
 import LiveFeedTicker from '../common/LiveFeedTicker';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,7 +14,7 @@ const QADashboard = () => {
     const [filters, setFilters] = useState({ startDate: '', endDate: '', agent: '', campaign: '', status: '' });
     const [activeCampaigns, setActiveCampaigns] = useState([]);
     const [selectedLeads, setSelectedLeads] = useState([]);
-    const [stats, setStats] = useState({ audited: 0, qualified: 0, disqualified: 0 });
+    const [stats, setStats] = useState({ audited: 0, qualified: 0, disqualified: 0, tbd: 0 });
     const [currentPage, setCurrentPage] = useState(1);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [activeTab, setActiveTab] = useState('leads');
@@ -56,7 +56,8 @@ const QADashboard = () => {
             setStats({
                 audited: auditLog.length,
                 qualified: auditLog.filter(l => l.action === 'qualified').length,
-                disqualified: auditLog.filter(l => l.action === 'disqualified').length
+                disqualified: auditLog.filter(l => l.action === 'disqualified').length,
+                tbd: auditLog.filter(l => l.action === 'tbd').length
             });
         }
     }, [currentUser.id]);
@@ -369,6 +370,19 @@ const QADashboard = () => {
                                 </div>
                             </div>
                         </Card>
+
+                        <Card className="p-6 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 dark:bg-amber-900/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500"></div>
+                            <div className="relative flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">TBD Audited</p>
+                                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.tbd}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200 dark:shadow-none">
+                                    <Clock className="w-6 h-6 text-white" />
+                                </div>
+                            </div>
+                        </Card>
                     </div>
 
                     <Card className="p-6">
@@ -423,6 +437,7 @@ const QADashboard = () => {
                                 </p>
                                 <div className="flex gap-2">
                                     <Button onClick={() => handleBulkAudit('qualified')}>Qualify All</Button>
+                                    <Button variant="secondary" onClick={() => handleBulkAudit('tbd')}>TBD All</Button>
                                     <Button variant="danger" onClick={() => handleBulkAudit('disqualified')}>Disqualify All</Button>
                                 </div>
                             </div>
@@ -481,7 +496,8 @@ const QADashboard = () => {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`px-3 py-1.5 inline-flex text-[11px] leading-4 font-bold rounded-xl border ${lead.status === 'qualified' ? 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/20' :
                                                     lead.status === 'disqualified' ? 'bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/20' :
-                                                        'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
+                                                        lead.status === 'tbd' ? 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-900/20' :
+                                                            'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/20'
                                                     } uppercase`}>
                                                     {lead.status}
                                                 </span>
@@ -489,8 +505,9 @@ const QADashboard = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                 <div className="flex gap-2">
                                                     <button onClick={() => { setEditingLead(lead); setShowUploadModal(true); }} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 transition-colors"><Edit className="w-5 h-5" /></button>
-                                                    <button onClick={() => handleQualify(lead.id, 'qualified')} className="text-green-600 dark:text-green-400 hover:text-green-900 transition-colors"><Check className="w-5 h-5" /></button>
-                                                    <button onClick={() => handleQualify(lead.id, 'disqualified')} className="text-red-600 dark:text-red-400 hover:text-red-900 transition-colors"><X className="w-5 h-5" /></button>
+                                                    <button onClick={() => handleQualify(lead.id, 'qualified')} title="Qualify" className="text-green-600 dark:text-green-400 hover:text-green-900 transition-colors"><Check className="w-5 h-5" /></button>
+                                                    <button onClick={() => handleQualify(lead.id, 'tbd')} title="Mark TBD" className="text-amber-600 dark:text-amber-400 hover:text-amber-900 transition-colors"><Clock className="w-5 h-5" /></button>
+                                                    <button onClick={() => handleQualify(lead.id, 'disqualified')} title="Disqualify" className="text-red-600 dark:text-red-400 hover:text-red-900 transition-colors"><X className="w-5 h-5" /></button>
                                                 </div>
                                             </td>
                                         </tr>
