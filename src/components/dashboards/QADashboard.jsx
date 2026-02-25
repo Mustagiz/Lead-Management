@@ -387,7 +387,7 @@ const QADashboard = () => {
 
                     <Card className="p-6">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Filters</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                             <Input
                                 label="Start Date"
                                 type="date"
@@ -414,7 +414,25 @@ const QADashboard = () => {
                                 placeholder="Search campaign..."
                                 options={activeCampaigns.map(c => ({ value: c.name, label: c.name }))}
                             />
-                            <div className="flex items-end gap-2 md:col-span-4 lg:col-span-1 pb-4">
+                            <SearchableSelect
+                                label="Status"
+                                value={filters.status}
+                                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                                placeholder="Select status..."
+                                options={[
+                                    { value: 'pending', label: 'Pending' },
+                                    { value: 'qualified', label: 'Qualified' },
+                                    { value: 'disqualified', label: 'Disqualified' },
+                                    { value: 'tbd', label: 'TBD' },
+                                    { value: 'approved', label: 'Approved' },
+                                    { value: 'rejected', label: 'Rejected' },
+                                    { value: 'converted', label: 'Converted' },
+                                    { value: 'callback', label: 'Callback' },
+                                    { value: 'not interested', label: 'Not Interested' },
+                                    { value: 'dnc', label: 'DNC' }
+                                ]}
+                            />
+                            <div className="flex items-end gap-2 md:col-span-3 lg:col-span-1 pb-4">
                                 <Button onClick={applyFilters} className="flex-1">
                                     <Filter className="w-4 h-4 mr-2" />
                                     Apply
