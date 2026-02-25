@@ -44,12 +44,13 @@ const UserModal = ({ user, onClose, onSuccess }) => {
                 return;
             }
 
-            const result = await createUser({
-                ...formData,
-                username: finalEmail
-            });
-            if (!result.success) {
-                alert('Error adding user: ' + result.error);
+            try {
+                await createUser({
+                    ...formData,
+                    email: finalEmail
+                });
+            } catch (error) {
+                alert('Error adding user: ' + error.message);
                 return;
             }
         }
