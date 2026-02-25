@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Download, X, CheckCircle2, Target, Building2, Globe, ClipboardCheck, Sparkles, RefreshCw } from 'lucide-react';
 import { enrichLead } from '../../services/enrichmentService';
 import { supabase } from '../../supabaseClient';
@@ -69,10 +69,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         fetchCampaigns();
     }, []);
 
-    const checkDuplicateEmail = async (email, campaign) => {
+    const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const checkDuplicateEmail = useCallback(async (email, campaign) => {
         if (!email || !campaign || !validateEmail(email)) return;
 
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('leads')
             .select('id')
             .eq('email', email)
@@ -93,7 +95,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 return newErrors;
             });
         }
-    };
+    }, [supabase]);
 
     useEffect(() => {
         if (uploadType !== 'single' || leadToEdit) return;
@@ -105,7 +107,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }, 800);
 
         return () => clearTimeout(timer);
-    }, [formData.email, formData.campaign, uploadType]);
+    }, [formData.email, formData.campaign, uploadType, leadToEdit, checkDuplicateEmail]);
 
     const FREE_EMAIL_DOMAINS = [
         'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
@@ -115,7 +117,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         'yahoo.co.in', 'yahoo.co.uk', 'hotmail.co.uk', 'hotmail.in'
     ];
 
-    const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     const isProfessionalEmail = (email) => {
         if (!validateEmail(email)) return false;
