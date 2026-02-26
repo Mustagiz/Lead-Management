@@ -49,7 +49,29 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const [updateExistingLeads, setUpdateExistingLeads] = useState(false);
     const [isEnriching, setIsEnriching] = useState(false);
 
-    const departments = ['HR', 'Finance', 'Marketing', 'Sales', 'IT', 'Operations', 'R&D', 'Customer Service', 'Legal', 'Supply Chain', 'Logistics', 'Administration', 'QA/QC', 'Engineering', 'Security', 'PMO', 'Corporate Strategy', 'PR', 'Facilities Management', 'Data Analytics'];
+    const departments = [
+        'Administration',
+        'Accounting',
+        'Business Development',
+        'Corporate Communications/Public Relations',
+        'Customer Service/Support',
+        'Environmental Health & Safety (EHS)',
+        'Finance',
+        'Human Resources (HR)',
+        'Information Technology (IT)',
+        'Legal',
+        'Logistics/Distribution',
+        'Maintenance',
+        'Marketing',
+        'Operations',
+        'Procurement/Purchasing',
+        'Production/Manufacturing',
+        'Quality Assurance/Inspection',
+        'Research & Development (R&D)',
+        'Sales',
+        'Security',
+        'Other'
+    ];
     const jobLevels = ['Entry-level', 'Junior', 'Mid-level', 'Senior', 'Principal', 'Executive', 'C-Suite'];
     const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'India', 'China', 'Japan', 'Brazil'];
     const industries = [
