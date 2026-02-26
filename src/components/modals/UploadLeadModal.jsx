@@ -287,7 +287,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             const link = document.createElement("a");
             link.style.display = 'none';
             link.href = url;
-            link.setAttribute("download", selectedBulkCampaign ? `template_${selectedBulkCampaign.replace(/\s+/g, '_')}.csv` : "lead_upload_template.csv");
+            link.setAttribute("download", selectedBulkCampaign ? `${selectedBulkCampaign.replace(/\s+/g, '_')}_Upload_Template.csv` : "lead_upload_template.csv");
             document.body.appendChild(link);
             link.click();
 
@@ -518,7 +518,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                             }
                         } else {
                             missingCampaignCount++;
+                            continue; // ← Skip: campaign not in DB, would violate FK constraint
                         }
+                    } else {
+                        // No campaign name provided at all — skip lead
+                        missingCampaignCount++;
+                        continue;
                     }
 
                     const leadId = getValue(columns, 'id');
@@ -565,7 +570,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         leadData.status = 'pending';
                     }
 
-                    setField('campaign', 'campaign', campaignName || '');
+                    // Set campaign from validated name only — never from raw CSV to avoid FK violation
+                    leadData.campaign = campaignName;
                     setField('company_name', 'company_name');
                     setField('salutation', 'salutation', 'Mr.');
                     setField('first_name', 'first_name');

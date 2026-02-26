@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart3, Users, Shield, Coffee, RefreshCw, Download, Upload, Filter, Trash2, Edit, Plus, AlertTriangle, Eye, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { BarChart3, Users, Shield, Coffee, RefreshCw, Download, Upload, Filter, Trash2, Edit, Plus, AlertTriangle, Eye, CheckCircle, XCircle, GitBranch, Calendar } from 'lucide-react';
 import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar } from 'recharts';
+import LeadDetailDrawer from '../modals/LeadDetailDrawer';
+import LeadPipelineView from './LeadPipelineView';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
@@ -52,6 +54,22 @@ const AdminDashboard = () => {
     const [showBulkDeleteLeadsConfirm, setShowBulkDeleteLeadsConfirm] = useState(false);
     const [showBulkEditModal, setShowBulkEditModal] = useState(false);
     const [bulkEditForm, setBulkEditForm] = useState({ status: '', campaign: '' });
+    const [selectedLeadForDrawer, setSelectedLeadForDrawer] = useState(null);
+    const [reportDateRange, setReportDateRange] = useState({ startDate: '', endDate: '', preset: 'all' });
+
+    const reportFilteredLeads = useMemo(() => {
+        if (reportDateRange.preset === 'all' && !reportDateRange.startDate && !reportDateRange.endDate) return leads;
+        const now = new Date();
+        return leads.filter(l => {
+            const d = new Date(l.date);
+            if (reportDateRange.preset === 'week') { const s = new Date(now); s.setDate(now.getDate() - 7); return d >= s; }
+            if (reportDateRange.preset === 'month') { const s = new Date(now); s.setMonth(now.getMonth() - 1); return d >= s; }
+            if (reportDateRange.preset === '3months') { const s = new Date(now); s.setMonth(now.getMonth() - 3); return d >= s; }
+            if (reportDateRange.startDate && l.date < reportDateRange.startDate) return false;
+            if (reportDateRange.endDate && l.date > reportDateRange.endDate) return false;
+            return true;
+        });
+    }, [leads, reportDateRange]);
     const [allBreaks, setAllBreaks] = useState([]);
     const [campaignPage, setCampaignPage] = useState(1);
     const CAMPAIGNS_PER_PAGE = 10;
@@ -441,6 +459,7 @@ const AdminDashboard = () => {
                     {[
                         { id: 'overview', icon: BarChart3, label: 'Overview' },
                         { id: 'leads', icon: Users, label: 'All Leads' },
+                        { id: 'pipeline', icon: GitBranch, label: 'Pipeline' },
                         { id: 'users', icon: Shield, label: 'Manage Users' },
                         { id: 'campaigns', icon: Plus, label: 'Campaigns' },
                         { id: 'breaks', icon: Coffee, label: 'Breaks' },
@@ -836,8 +855,53 @@ const AdminDashboard = () => {
                 </div>
             )}
 
+            {activeTab === 'pipeline' && (
+                <LeadPipelineView leads={leads} users={users} />
+            )}
+
             {activeTab === 'reports' && (
                 <div className="space-y-6">
+                    {/* Date Range Filter Bar */}
+                    <Card className="p-5">
+                        <div className="flex flex-wrap items-end gap-4">
+                            <div className="flex gap-2 flex-wrap">
+                                {[
+                                    { label: 'All Time', value: 'all' },
+                                    { label: 'This Week', value: 'week' },
+                                    { label: 'This Month', value: 'month' },
+                                    { label: 'Last 3 Months', value: '3months' },
+                                ].map(p => (
+                                    <button
+                                        key={p.value}
+                                        onClick={() => setReportDateRange(prev => ({ ...prev, preset: p.value, startDate: '', endDate: '' }))}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${reportDateRange.preset === p.value
+                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                                            }`}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex items-end gap-3 flex-1">
+                                <div className="flex-1 min-w-[140px]">
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Custom From</label>
+                                    <input type="date" value={reportDateRange.startDate}
+                                        onChange={e => setReportDateRange({ startDate: e.target.value, endDate: reportDateRange.endDate, preset: 'custom' })}
+                                        className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                    />
+                                </div>
+                                <div className="flex-1 min-w-[140px]">
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Custom To</label>
+                                    <input type="date" value={reportDateRange.endDate}
+                                        onChange={e => setReportDateRange({ startDate: reportDateRange.startDate, endDate: e.target.value, preset: 'custom' })}
+                                        className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card className="p-6 h-[500px]">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
@@ -846,17 +910,11 @@ const AdminDashboard = () => {
                             </h3>
                             <ResponsiveContainer width="100%" height="90%">
                                 <BarChart
-                                    data={campaigns
-                                        .map(c => {
-                                            const cLeads = leads.filter(l => l.campaign === c.name);
-                                            const qualified = cLeads.filter(l => l.status === 'qualified').length;
-                                            return {
-                                                name: c.name,
-                                                rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
-                                            };
-                                        })
-                                        .sort((a, b) => b.rate - a.rate)
-                                        .slice(0, 10)
+                                    data={campaigns.map(c => {
+                                        const cLeads = reportFilteredLeads.filter(l => l.campaign === c.name);
+                                        const qualified = cLeads.filter(l => l.status === 'qualified').length;
+                                        return { name: c.name, rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0 };
+                                    }).sort((a, b) => b.rate - a.rate).slice(0, 10)
                                         .map((item, idx) => ({ ...item, label: `#${idx + 1}` }))}
                                     margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
                                 >
@@ -881,10 +939,7 @@ const AdminDashboard = () => {
                             <ResponsiveContainer width="100%" height="90%">
                                 <BarChart
                                     data={campaigns
-                                        .map(c => ({
-                                            name: c.name,
-                                            total: leads.filter(l => l.campaign === c.name).length
-                                        }))
+                                        .map(c => ({ name: c.name, total: reportFilteredLeads.filter(l => l.campaign === c.name).length }))
                                         .sort((a, b) => b.total - a.total)
                                         .slice(0, 10)
                                         .map((item, idx) => ({ ...item, label: `#${idx + 1}` }))}
@@ -921,7 +976,7 @@ const AdminDashboard = () => {
                                     {campaigns
                                         .slice((reportsPage - 1) * REPORTS_PER_PAGE, reportsPage * REPORTS_PER_PAGE)
                                         .map(c => {
-                                            const cLeads = leads.filter(l => l.campaign === c.name);
+                                            const cLeads = reportFilteredLeads.filter(l => l.campaign === c.name);
                                             const qCount = cLeads.filter(l => l.status === 'qualified').length;
                                             const dCount = cLeads.filter(l => l.status === 'disqualified').length;
                                             const rate = cLeads.length > 0 ? ((qCount / cLeads.length) * 100).toFixed(1) : 0;
@@ -962,6 +1017,13 @@ const AdminDashboard = () => {
 
             {showUploadModal && <UploadLeadModal onClose={() => setShowUploadModal(false)} onSuccess={loadData} employeeId={currentUser.id} employeeName={currentUser.name} />}
             {showEditLeadModal && editingLead && <UploadLeadModal onClose={() => { setShowEditLeadModal(false); setEditingLead(null); }} onSuccess={loadData} employeeId={editingLead.employee_id} employeeName={editingLead.ra_name} leadToEdit={editingLead} />}
+            {selectedLeadForDrawer && (
+                <LeadDetailDrawer
+                    lead={selectedLeadForDrawer}
+                    onClose={() => setSelectedLeadForDrawer(null)}
+                    onEdit={() => { setEditingLead(selectedLeadForDrawer); setShowEditLeadModal(true); setSelectedLeadForDrawer(null); }}
+                />
+            )}
             {showUserModal && <UserModal user={editingUser} onClose={() => setShowUserModal(false)} onSuccess={loadData} />}
             {showCampaignModal && <CampaignModal campaign={editingCampaign} onClose={() => setShowCampaignModal(false)} onSuccess={loadData} />}
 
@@ -1028,3 +1090,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
