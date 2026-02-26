@@ -42,7 +42,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }
     );
     const [csvFile, setCsvFile] = useState(null);
-    const [selectedBulkCampaign, setSelectedBulkCampaign] = useState('');
     const [errors, setErrors] = useState({});
     const [campaigns, setCampaigns] = useState([]);
     const [uploadResult, setUploadResult] = useState(null);
@@ -703,8 +702,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
             let headers = [...standardHeaders];
 
-            if (selectedBulkCampaign) {
-                const campaignObj = campaigns.find(c => c.name === selectedBulkCampaign);
+            if (formData.campaign) {
+                const campaignObj = campaigns.find(c => c.name === formData.campaign);
                 if (campaignObj && campaignObj.custom_questions) {
                     campaignObj.custom_questions.forEach(q => headers.push(q.question));
                 }
@@ -725,7 +724,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             const link = document.createElement("a");
             link.style.display = 'none';
             link.href = url;
-            link.setAttribute("download", selectedBulkCampaign ? `${selectedBulkCampaign.replace(/\s+/g, '_')}_Upload_Template.csv` : "lead_upload_template.csv");
+            link.setAttribute("download", formData.campaign ? `${formData.campaign.replace(/\s+/g, '_')}_Upload_Template.csv` : "lead_upload_template.csv");
             document.body.appendChild(link);
             link.click();
 
@@ -801,7 +800,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
             alert('Please select a CSV file');
             return;
         }
-        if (!selectedBulkCampaign) {
+        if (!formData.campaign) {
             alert('Please select a campaign for bulk upload');
             return;
         }
@@ -1388,8 +1387,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                     <div className="space-y-4">
                                         <Select
                                             label="Select Campaign (Required) *"
-                                            value={selectedBulkCampaign}
-                                            onChange={(e) => setSelectedBulkCampaign(e.target.value)}
+                                            value={formData.campaign}
+                                            onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
                                             options={[{ value: '', label: '-- Select Campaign --' }, ...campaigns.map(c => ({ value: c.name, label: c.name }))]}
                                             required
                                         />
