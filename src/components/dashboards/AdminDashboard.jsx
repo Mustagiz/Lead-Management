@@ -436,25 +436,30 @@ const AdminDashboard = () => {
     return (
         <div className="space-y-6">
             <LiveFeedTicker />
-            <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50">
-                {[
-                    { id: 'overview', icon: BarChart3, label: 'Overview' },
-                    { id: 'leads', icon: Users, label: 'All Leads' },
-                    { id: 'users', icon: Shield, label: 'Manage Users' },
-                    { id: 'campaigns', icon: Plus, label: 'Campaigns' },
-                    { id: 'breaks', icon: Coffee, label: 'Breaks' },
-                    { id: 'reports', icon: BarChart3, label: 'Reports' },
-                ].map(tab => (
-                    <Button
-                        key={tab.id}
-                        variant={activeTab === tab.id ? 'primary' : 'ghost'}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === tab.id ? 'shadow-lg shadow-indigo-500/20' : ''}`}
-                        icon={tab.icon}
-                    >
-                        {tab.label}
-                    </Button>
-                ))}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50 flex-1">
+                    {[
+                        { id: 'overview', icon: BarChart3, label: 'Overview' },
+                        { id: 'leads', icon: Users, label: 'All Leads' },
+                        { id: 'users', icon: Shield, label: 'Manage Users' },
+                        { id: 'campaigns', icon: Plus, label: 'Campaigns' },
+                        { id: 'breaks', icon: Coffee, label: 'Breaks' },
+                        { id: 'reports', icon: BarChart3, label: 'Reports' },
+                    ].map(tab => (
+                        <Button
+                            key={tab.id}
+                            variant={activeTab === tab.id ? 'primary' : 'ghost'}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === tab.id ? 'shadow-lg shadow-indigo-500/20' : ''}`}
+                            icon={tab.icon}
+                        >
+                            {tab.label}
+                        </Button>
+                    ))}
+                </div>
+                <Button onClick={() => setShowUploadModal(true)} variant="primary" className="w-full md:w-auto px-6 shadow-indigo-500/20" icon={Upload}>
+                    Bulk Import Leads
+                </Button>
             </div>
 
             {activeTab === 'overview' && (
@@ -535,9 +540,6 @@ const AdminDashboard = () => {
                                 </Button>
                             </div>
                             <div className="flex gap-3">
-                                <Button onClick={() => setShowUploadModal(true)} variant="secondary" className="px-6" icon={Upload}>
-                                    Bulk Import
-                                </Button>
                                 <Button onClick={applyFilters} className="px-8 shadow-indigo-500/20" icon={Filter}>
                                     Apply Filters
                                 </Button>

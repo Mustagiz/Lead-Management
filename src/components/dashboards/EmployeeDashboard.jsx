@@ -277,22 +277,27 @@ const EmployeeDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50">
-                <Button
-                    variant={activeTab === 'leads' ? 'primary' : 'ghost'}
-                    onClick={() => setActiveTab('leads')}
-                    className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'leads' ? 'shadow-lg shadow-indigo-500/20' : ''}`}
-                    icon={Users}
-                >
-                    My Leads
-                </Button>
-                <Button
-                    variant={activeTab === 'breaks' ? 'primary' : 'ghost'}
-                    onClick={() => setActiveTab('breaks')}
-                    className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'breaks' ? 'shadow-lg shadow-purple-500/20' : ''}`}
-                    icon={Coffee}
-                >
-                    Break Management
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50 flex-1">
+                    <Button
+                        variant={activeTab === 'leads' ? 'primary' : 'ghost'}
+                        onClick={() => setActiveTab('leads')}
+                        className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'leads' ? 'shadow-lg shadow-indigo-500/20' : ''}`}
+                        icon={Users}
+                    >
+                        My Leads
+                    </Button>
+                    <Button
+                        variant={activeTab === 'breaks' ? 'primary' : 'ghost'}
+                        onClick={() => setActiveTab('breaks')}
+                        className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'breaks' ? 'shadow-lg shadow-purple-500/20' : ''}`}
+                        icon={Coffee}
+                    >
+                        Break Management
+                    </Button>
+                </div>
+                <Button onClick={() => setShowUploadModal(true)} variant="primary" className="w-full md:w-auto px-8 shadow-indigo-500/20" icon={Plus}>
+                    Upload New Lead
                 </Button>
             </div>
 
@@ -320,8 +325,7 @@ const EmployeeDashboard = () => {
                             <Input label="To Date" type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
                             <SearchableSelect label="Campaign Name" value={filters.campaign} onChange={(e) => setFilters({ ...filters, campaign: e.target.value })} options={campaigns.map(c => ({ value: c.name, label: c.name }))} placeholder="Search campaigns..." />
                             <div className="md:pt-6 pt-0 flex gap-3">
-                                <Button onClick={() => setShowUploadModal(true)} variant="secondary" className="flex-1" icon={Upload}>Upload</Button>
-                                <Button onClick={applyFilters} className="flex-1 shadow-indigo-500/20" icon={Filter}>Filter</Button>
+                                <Button onClick={applyFilters} className="w-full shadow-indigo-500/20" icon={Filter}>Filter Leads</Button>
                             </div>
                         </div>
                     </Card>
