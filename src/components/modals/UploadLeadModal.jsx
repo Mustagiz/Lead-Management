@@ -1465,7 +1465,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                             options={[{ value: '', label: '-- Select Campaign --' }, ...campaigns.map(c => ({ value: c.name, label: c.name }))]}
                                             required
                                         />
-                                        {(currentUser?.role === 'qa' || currentUser?.role === 'admin') && (
+                                        {(currentUser?.role === 'qa' || currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
                                             <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
                                                 <input
                                                     type="checkbox"
