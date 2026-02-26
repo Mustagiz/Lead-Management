@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BarChart3, Users, Shield, Coffee, RefreshCw, Download, Upload, Filter, Trash2, Edit, Plus, AlertTriangle, Eye, CheckCircle, XCircle, GitBranch, Calendar } from 'lucide-react';
+import { BarChart3, Users, Shield, Coffee, RefreshCw, Download, Upload, Filter, Trash2, Edit, Plus, AlertTriangle, Eye, CheckCircle, XCircle, GitBranch } from 'lucide-react';
 import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar } from 'recharts';
 import LeadDetailDrawer from '../modals/LeadDetailDrawer';
 import LeadPipelineView from './LeadPipelineView';

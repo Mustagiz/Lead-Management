@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Edit, User, Building2, Phone, Mail, MapPin, Briefcase, Tag, MessageSquare, Clock, ChevronRight, ExternalLink } from 'lucide-react';
+import { X, Edit, User, Building2, Phone, MapPin, Tag, Clock, ChevronRight, ExternalLink } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Badge, Button } from '../common/UIComponents';
 import { formatDisplayDate } from '../../utils/dateUtils';
