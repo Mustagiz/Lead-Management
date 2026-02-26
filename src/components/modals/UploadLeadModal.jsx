@@ -955,7 +955,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     rows[0].forEach((header, index) => {
                         rowData[header] = columns[index] || '';
                     });
-                    rowData['Rejection Reason'] = reason;
+                    rowData['Rejection Status'] = reason;
                     rejectedRows.push(rowData);
                 };
 
@@ -1205,6 +1205,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 }
 
                 setUploadResult({
+                    totalRows: rows.length - 1,
                     successCount,
                     dbDuplicateCount,
                     internalDuplicateCount,
@@ -1248,6 +1249,10 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
+                                <div className="p-5 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/20 rounded-2xl">
+                                    <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">Total Records</p>
+                                    <p className="text-4xl font-extrabold text-indigo-900 dark:text-indigo-100">{uploadResult.totalRows}</p>
+                                </div>
                                 <div className="p-5 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-2xl">
                                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">Imported</p>
                                     <p className="text-4xl font-extrabold text-emerald-900 dark:text-emerald-100">{uploadResult.successCount}</p>
@@ -1280,7 +1285,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                             className="w-full py-4 px-6 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/20 rounded-2xl text-rose-600 dark:text-rose-400 font-bold flex items-center justify-center gap-3 hover:bg-rose-100 dark:hover:bg-rose-900/20 transition-all group"
                                         >
                                             <Download className="w-5 h-5 group-hover:bounce" />
-                                            Download {uploadResult.rejectedLeads.length} Rejected Leads (with reasons)
+                                            Download {uploadResult.rejectedLeads.length} Rejected Leads Report
                                         </button>
                                     </div>
                                 )}
