@@ -857,7 +857,7 @@ const AdminDashboard = () => {
                                         })
                                         .sort((a, b) => b.rate - a.rate)
                                         .slice(0, 10)}
-                                    margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis
@@ -865,8 +865,9 @@ const AdminDashboard = () => {
                                         angle={-45}
                                         textAnchor="end"
                                         interval={0}
-                                        height={100}
-                                        tick={{ fontSize: 10 }}
+                                        height={120}
+                                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }}
+                                        tickFormatter={(value) => value.length > 20 ? `${value.substring(0, 20)}...` : value}
                                     />
                                     <YAxis />
                                     <Tooltip formatter={(value) => [`${value}%`, 'Conversion Rate']} />
@@ -889,7 +890,7 @@ const AdminDashboard = () => {
                                         }))
                                         .sort((a, b) => b.total - a.total)
                                         .slice(0, 10)}
-                                    margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis
@@ -897,8 +898,9 @@ const AdminDashboard = () => {
                                         angle={-45}
                                         textAnchor="end"
                                         interval={0}
-                                        height={100}
-                                        tick={{ fontSize: 10 }}
+                                        height={120}
+                                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }}
+                                        tickFormatter={(value) => value.length > 20 ? `${value.substring(0, 20)}...` : value}
                                     />
                                     <YAxis />
                                     <Tooltip />
