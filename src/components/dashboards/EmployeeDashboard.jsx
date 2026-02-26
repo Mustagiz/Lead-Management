@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Coffee, BarChart3, CheckCircle, XCircle, Clock, Filter, RefreshCw, Download, Upload, Eye, Users, Plus } from 'lucide-react';
+import { Coffee, BarChart3, CheckCircle, XCircle, Clock, Filter, RefreshCw, Download, Eye, Users, Plus } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
