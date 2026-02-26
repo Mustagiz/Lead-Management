@@ -844,7 +844,7 @@ const AdminDashboard = () => {
                                 <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
                                 Campaign Conversion Rates (%)
                             </h3>
-                            <ResponsiveContainer width="100%" height="80%">
+                            <ResponsiveContainer width="100%" height="90%">
                                 <BarChart
                                     data={campaigns
                                         .map(c => {
@@ -852,24 +852,24 @@ const AdminDashboard = () => {
                                             const qualified = cLeads.filter(l => l.status === 'qualified').length;
                                             return {
                                                 name: c.name,
+                                                shortName: c.name ? c.name.substring(0, 12) + (c.name.length > 12 ? '…' : '') : '',
                                                 rate: cLeads.length > 0 ? parseFloat(((qualified / cLeads.length) * 100).toFixed(1)) : 0
                                             };
                                         })
                                         .sort((a, b) => b.rate - a.rate)
                                         .slice(0, 10)}
-                                    margin={{ top: 20, right: 30, left: 20, bottom: 160 }}
+                                    margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis
-                                        dataKey="name"
-                                        angle={-60}
-                                        textAnchor="end"
+                                        dataKey="shortName"
                                         interval={0}
-                                        height={160}
-                                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }}
-                                        tickFormatter={(value) => value && value.length > 12 ? `${value.substring(0, 12)}...` : value}
+                                        height={60}
+                                        tick={{ fontSize: 9, fill: '#64748b' }}
+                                        angle={-35}
+                                        textAnchor="end"
                                     />
-                                    <YAxis />
+                                    <YAxis tick={{ fontSize: 10, fill: '#64748b' }} />
                                     <Tooltip formatter={(value) => [`${value}%`, 'Conversion Rate']} />
                                     <Bar dataKey="rate" fill="#6366f1" radius={[4, 4, 0, 0]} />
                                 </BarChart>
@@ -881,28 +881,28 @@ const AdminDashboard = () => {
                                 <Users className="w-5 h-5 mr-2 text-indigo-600" />
                                 Leads Volume by Campaign
                             </h3>
-                            <ResponsiveContainer width="100%" height="80%">
+                            <ResponsiveContainer width="100%" height="90%">
                                 <BarChart
                                     data={campaigns
                                         .map(c => ({
                                             name: c.name,
+                                            shortName: c.name ? c.name.substring(0, 12) + (c.name.length > 12 ? '…' : '') : '',
                                             total: leads.filter(l => l.campaign === c.name).length
                                         }))
                                         .sort((a, b) => b.total - a.total)
                                         .slice(0, 10)}
-                                    margin={{ top: 20, right: 30, left: 20, bottom: 160 }}
+                                    margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis
-                                        dataKey="name"
-                                        angle={-60}
-                                        textAnchor="end"
+                                        dataKey="shortName"
                                         interval={0}
-                                        height={160}
-                                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }}
-                                        tickFormatter={(value) => value && value.length > 12 ? `${value.substring(0, 12)}...` : value}
+                                        height={60}
+                                        tick={{ fontSize: 9, fill: '#64748b' }}
+                                        angle={-35}
+                                        textAnchor="end"
                                     />
-                                    <YAxis />
+                                    <YAxis tick={{ fontSize: 10, fill: '#64748b' }} />
                                     <Tooltip />
                                     <Bar dataKey="total" fill="#10b981" radius={[4, 4, 0, 0]} />
                                 </BarChart>
