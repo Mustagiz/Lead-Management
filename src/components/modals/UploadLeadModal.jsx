@@ -1176,11 +1176,6 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
 
 
-                if (finalLeads.length === 0) {
-                    alert('No leads to process.');
-                    onClose();
-                    return;
-                }
 
                 const insertBatchSize = 100;
                 let successCount = 0;
