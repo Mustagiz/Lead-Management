@@ -59,6 +59,7 @@ const AdminDashboard = () => {
     const USERS_PER_PAGE = 10;
     const [reportsPage, setReportsPage] = useState(1);
     const REPORTS_PER_PAGE = 10;
+    const [now, setNow] = useState(Date.now());
 
     const formatTime = (ts) => {
         const h = Math.floor(ts / 3600);
@@ -66,6 +67,11 @@ const AdminDashboard = () => {
         const s = ts % 60;
         return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
     };
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         loadData();
@@ -809,7 +815,12 @@ const AdminDashboard = () => {
                                                             <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Available</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{formatTime(userBreak.total_break_seconds)}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                                                        {formatTime(userBreak.current_break_start
+                                                            ? userBreak.total_break_seconds + Math.floor((now - new Date(userBreak.current_break_start).getTime()) / 1000)
+                                                            : userBreak.total_break_seconds
+                                                        )}
+                                                    </td>
                                                     <td className="px-6 py-4 text-sm">
                                                         <button onClick={() => { setSelectedUserForBreaks(user); setShowAdminBreakHistory(true); }} className="text-indigo-600 dark:text-indigo-400 flex items-center font-medium"><Eye className="w-4 h-4 mr-1" /> View History</button>
                                                     </td>
