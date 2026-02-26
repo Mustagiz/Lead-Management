@@ -48,6 +48,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const [uploadResult, setUploadResult] = useState(null);
     const [updateExistingLeads, setUpdateExistingLeads] = useState(false);
     const [isEnriching, setIsEnriching] = useState(false);
+    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
     const departments = [
         'Administration',
@@ -500,8 +501,12 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     const checkDuplicateEmail = useCallback(async (email, campaign) => {
-        if (!email || !campaign || !validateEmail(email)) return;
+        if (!email || !campaign || !validateEmail(email)) {
+            setIsCheckingEmail(false);
+            return;
+        }
 
+        setIsCheckingEmail(true);
         const { data } = await supabase
             .from('leads')
             .select('id')
@@ -523,6 +528,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 return newErrors;
             });
         }
+        setIsCheckingEmail(false);
     }, []);
 
     useEffect(() => {
@@ -598,6 +604,10 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
     const handleSingleSubmit = (e) => {
         e.preventDefault();
+        if (isCheckingEmail) {
+            setErrors(prev => ({ ...prev, email: 'Please wait, validating email...' }));
+            return;
+        }
         const newErrors = {};
 
         if (!formData.email || !validateEmail(formData.email)) {
@@ -1253,7 +1263,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                             <div className="hidden md:block"></div>
                                             <Input label="First Name *" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} error={errors.first_name} required />
                                             <Input label="Last Name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} />
-                                            <Input label="Email *" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} error={errors.email} required />
+                                            <Input
+                                                label="Email *"
+                                                type="email"
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                error={errors.email}
+                                                required
+                                                suffix={
+                                                    isCheckingEmail ? (
+                                                        <RefreshCw className="w-4 h-4 text-indigo-500 animate-spin" />
+                                                    ) : (formData.email && !errors.email && validateEmail(formData.email)) ? (
+                                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                                    ) : null
+                                                }
+                                            />
                                             <Input label="Phone Number" value={formData.phone_no} onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })} error={errors.phone_no} />
                                             <Input label="Direct Dial" value={formData.direct_dial} onChange={(e) => setFormData({ ...formData, direct_dial: e.target.value })} error={errors.direct_dial} />
                                         </div>
@@ -1353,7 +1377,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                                     <div className="flex justify-end gap-4 mt-10 pt-6 border-t border-gray-100 dark:border-slate-800">
                                         <Button variant="secondary" onClick={onClose} type="button">Cancel</Button>
-                                        <Button type="submit" className="min-w-[150px]">
+                                        <Button type="submit" className="min-w-[150px]" disabled={isCheckingEmail} isLoading={isCheckingEmail}>
                                             <Upload className="w-4 h-4 mr-2" />
                                             {leadToEdit ? 'Update Lead' : 'Upload Lead'}
                                         </Button>

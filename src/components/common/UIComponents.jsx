@@ -31,7 +31,7 @@ export const Button = ({ children, variant = 'primary', onClick, disabled, isLoa
     );
 };
 
-export const Input = ({ label, error, icon: Icon, ...props }) => (
+export const Input = ({ label, error, icon: Icon, suffix, ...props }) => (
     <div className="w-full">
         {label && <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{label}</label>}
         <div className="relative group">
@@ -42,8 +42,13 @@ export const Input = ({ label, error, icon: Icon, ...props }) => (
             )}
             <input
                 {...props}
-                className={`w-full ${Icon ? 'pl-11' : 'px-4'} py-3 bg-white dark:bg-slate-900/50 border dark:border-slate-800 rounded-xl focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/5 focus:border-indigo-500 dark:focus:border-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 text-slate-900 dark:text-slate-100 outline-none shadow-sm ${error ? 'border-rose-500 ring-rose-500/10' : 'border-slate-200 hover:border-slate-300 dark:hover:border-slate-700'}`}
+                className={`w-full ${Icon ? 'pl-11' : 'px-4'} ${suffix ? 'pr-11' : 'px-4'} py-3 bg-white dark:bg-slate-900/50 border dark:border-slate-800 rounded-xl focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/5 focus:border-indigo-500 dark:focus:border-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 text-slate-900 dark:text-slate-100 outline-none shadow-sm ${error ? 'border-rose-500 ring-rose-500/10' : 'border-slate-200 hover:border-slate-300 dark:hover:border-slate-700'}`}
             />
+            {suffix && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
+                    {suffix}
+                </div>
+            )}
         </div>
         {error && <p className="mt-1.5 text-xs font-semibold text-rose-500 ml-1 flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
             <span className="w-1 h-1 rounded-full bg-rose-500"></span>
