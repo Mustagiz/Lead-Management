@@ -738,6 +738,43 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }
     };
 
+    const downloadRejectedLeads = () => {
+        if (!uploadResult?.rejectedLeads || uploadResult.rejectedLeads.length === 0) return;
+
+        try {
+            const data = uploadResult.rejectedLeads;
+            // Get combined headers from all rows (to include Rejection Reason and any custom questions)
+            const headers = Array.from(new Set(data.flatMap(row => Object.keys(row))));
+
+            const csvRows = [
+                headers.join(","),
+                ...data.map(row => headers.map(header => {
+                    const cell = row[header] === null || row[header] === undefined ? '' : String(row[header]);
+                    return `"${cell.replace(/"/g, '""')}"`;
+                }).join(","))
+            ];
+
+            const csvContent = csvRows.join("\n");
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.style.display = 'none';
+            link.href = url;
+            link.setAttribute("download", `rejected_leads_${formData.campaign || 'bulk'}_${new Date().getTime()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        } catch (err) {
+            console.error('Download error:', err);
+            alert('Error generating rejected leads file');
+        }
+    };
+
     const parseCSV = (text) => {
         const rows = [];
         let currentRow = [];
@@ -911,6 +948,16 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 let invalidEmailCount = 0;
                 const newLeads = [];
                 const seenEmails = new Set();
+                const rejectedRows = [];
+
+                const addRejectedRow = (columns, reason) => {
+                    const rowData = {};
+                    rows[0].forEach((header, index) => {
+                        rowData[header] = columns[index] || '';
+                    });
+                    rowData['Rejection Reason'] = reason;
+                    rejectedRows.push(rowData);
+                };
 
                 for (let i = 1; i < rows.length; i++) {
                     const columns = rows[i];
@@ -919,18 +966,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                     if (!companyName) {
                         skippedCount++;
+                        addRejectedRow(columns, 'Missing company name');
                         continue;
                     }
 
                     // Professional email validation
                     if (email && !isProfessionalEmail(email)) {
                         invalidEmailCount++;
+                        addRejectedRow(columns, 'Not a professional email address');
                         continue;
                     }
 
                     if (email) {
                         if (seenEmails.has(email.toLowerCase())) {
                             internalDuplicateCount++;
+                            addRejectedRow(columns, 'Duplicate email in the same file');
                             continue;
                         }
                         seenEmails.add(email.toLowerCase());
@@ -955,11 +1005,13 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                             }
                         } else {
                             missingCampaignCount++;
+                            addRejectedRow(columns, `Campaign "${rawCampaignName}" not found in database`);
                             continue; // ← Skip: campaign not in DB, would violate FK constraint
                         }
                     } else {
                         // No campaign name provided at all — skip lead
                         missingCampaignCount++;
+                        addRejectedRow(columns, 'No campaign selected or found in row');
                         continue;
                     }
 
@@ -1043,6 +1095,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     }
 
                     if (leadId) leadData.id = leadId;
+                    leadData._originalColumns = columns;
                     newLeads.push(leadData);
                 }
 
@@ -1097,6 +1150,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         if (updateExistingLeads) {
                             const { employee_id, ra_name, id, ...updateData } = nl;
                             finalLeads.push({ ...updateData, id: existingById.id });
+                        } else {
+                            addRejectedRow(nl._originalColumns, 'Lead with this ID already exists');
                         }
                         continue;
                     }
@@ -1106,6 +1161,11 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         const campaignKey = `${nl.email.toLowerCase()}::${(nl.campaign || '').toLowerCase()}`;
                         if (existingInfoMap.byEmailCampaign[campaignKey]) {
                             campaignDuplicateCount++;
+                            // Re-calculate row data for rejection export
+                            // We need to map nl back to its columns. Since newLeads was created in order, 
+                            // we can track the original row index or columns if we stored them.
+                            // To be safe, let's modify the newLeads push to include the columns.
+                            addRejectedRow(nl._originalColumns, `Duplicate email in campaign "${nl.campaign}"`);
                             continue; // Reject - duplicate in same campaign
                         }
                     }
@@ -1151,7 +1211,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     campaignDuplicateCount,
                     invalidEmailCount,
                     skippedCount,
-                    missingCampaignCount
+                    missingCampaignCount,
+                    rejectedLeads: rejectedRows
                 });
                 onSuccess();
             };
@@ -1211,6 +1272,18 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Skipped Rows</p>
                                     <p className="text-4xl font-extrabold text-slate-900 dark:text-slate-100">{uploadResult.skippedCount}</p>
                                 </div>
+
+                                {uploadResult.rejectedLeads?.length > 0 && (
+                                    <div className="mb-8">
+                                        <button
+                                            onClick={downloadRejectedLeads}
+                                            className="w-full py-4 px-6 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/20 rounded-2xl text-rose-600 dark:text-rose-400 font-bold flex items-center justify-center gap-3 hover:bg-rose-100 dark:hover:bg-rose-900/20 transition-all group"
+                                        >
+                                            <Download className="w-5 h-5 group-hover:bounce" />
+                                            Download {uploadResult.rejectedLeads.length} Rejected Leads (with reasons)
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <Button onClick={() => { setUploadResult(null); onClose(); }} className="w-full py-4 text-lg">
@@ -1428,7 +1501,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                             >
                                                 <Download className="w-4 h-4" />
                                                 <span className="underline underline-offset-4 decoration-indigo-200 dark:decoration-indigo-800">
-                                                    Download CSV Template
+                                                    {formData.campaign ? `Download ${formData.campaign} Template` : 'Download CSV Template'}
                                                 </span>
                                             </button>
                                         </div>
