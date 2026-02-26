@@ -936,7 +936,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         seenEmails.add(email.toLowerCase());
                     }
 
-                    const rawCampaignName = selectedBulkCampaign || getValue(columns, 'Campaign');
+                    const rawCampaignName = formData.campaign || getValue(columns, 'Campaign');
                     let campaignName = '';
                     const customQuestionResponses = {};
 
