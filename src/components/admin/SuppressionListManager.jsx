@@ -338,7 +338,7 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                                     <th className="px-6 py-4 text-left">
                                         <input
                                             type="checkbox"
-                                            checked={selectedIds.length === paginatedList.length && paginatedList.length > 0}
+                                            checked={selectedIds.length === list.length && list.length > 0}
                                             onChange={toggleSelectAll}
                                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
