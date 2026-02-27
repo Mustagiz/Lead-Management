@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Download, Search, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Clock, Filter, X } from 'lucide-react';
+import { Download, Search, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Clock, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
-import { Card, Button, Input } from '../common/UIComponents';
+import { Card, Button } from '../common/UIComponents';
 
 const UploadHistory = ({ userId, role }) => {
     const [history, setHistory] = useState([]);
