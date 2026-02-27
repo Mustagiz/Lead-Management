@@ -16,51 +16,86 @@ const InternalSuppressionManager = () => {
 
     const loadRecords = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('internal_suppression_list')
-            .select('*')
-            .order('added_at', { ascending: false });
+        let allRecords = [];
+        let from = 0;
+        let pageSize = 1000;
+        let hasMore = true;
 
-        if (error) {
+        try {
+            while (hasMore) {
+                const { data, error } = await supabase
+                    .from('internal_suppression_list')
+                    .select('*')
+                    .range(from, from + pageSize - 1)
+                    .order('added_at', { ascending: false });
+
+                if (error) throw error;
+
+                allRecords = [...allRecords, ...(data || [])];
+                if ((data || []).length < pageSize) {
+                    hasMore = false;
+                } else {
+                    from += pageSize;
+                }
+            }
+
+            setRecords(allRecords);
+            setFilteredRecords(allRecords);
+
+            // Calculate stats
+            const campaigns = new Set(allRecords.map(r => r.campaign_name));
+            setStats({
+                totalRecords: allRecords.length,
+                campaignsCovered: campaigns.size
+            });
+        } catch (error) {
             console.error('Error fetching internal suppression:', error);
+        } finally {
             setLoading(false);
-            return;
         }
-
-        setRecords(data || []);
-        setFilteredRecords(data || []);
-
-        // Calculate stats
-        const campaigns = new Set((data || []).map(r => r.campaign_name));
-        setStats({
-            totalRecords: (data || []).length,
-            campaignsCovered: campaigns.size
-        });
-        setLoading(false);
     };
 
     const syncHistoricalLeads = async () => {
         setSyncing(true);
         try {
-            // 1. Fetch all leads
-            const { data: leads, error: leadsError } = await supabase
-                .from('leads')
-                .select('campaign, first_name, last_name, email, company_name, ra_name, created_at');
+            // 1. Fetch all leads in batches
+            let allLeads = [];
+            let fromLeads = 0;
+            let hasMoreLeads = true;
+            const pageSize = 1000;
 
-            if (leadsError) throw leadsError;
+            while (hasMoreLeads) {
+                const { data, error } = await supabase
+                    .from('leads')
+                    .select('campaign, first_name, last_name, email, company_name, ra_name, created_at')
+                    .range(fromLeads, fromLeads + pageSize - 1);
 
-            // 2. Fetch existing suppression emails to avoid duplicates
-            const { data: existing, error: existingError } = await supabase
-                .from('internal_suppression_list')
-                .select('email');
+                if (error) throw error;
+                allLeads = [...allLeads, ...(data || [])];
+                if ((data || []).length < pageSize) hasMoreLeads = false;
+                else fromLeads += pageSize;
+            }
 
-            if (existingError) throw existingError;
+            // 2. Fetch existing suppression emails in batches
+            let existingEmails = new Set();
+            let fromExisting = 0;
+            let hasMoreExisting = true;
 
-            const existingEmails = new Set((existing || []).map(e => e.email.toLowerCase()));
+            while (hasMoreExisting) {
+                const { data, error } = await supabase
+                    .from('internal_suppression_list')
+                    .select('email')
+                    .range(fromExisting, fromExisting + pageSize - 1);
+
+                if (error) throw error;
+                (data || []).forEach(e => existingEmails.add(e.email.toLowerCase()));
+                if ((data || []).length < pageSize) hasMoreExisting = false;
+                else fromExisting += pageSize;
+            }
 
             // 3. Filter leads that aren't suppressed yet (unique by email)
             const seenInBatch = new Set();
-            const toInsert = (leads || [])
+            const toInsert = allLeads
                 .filter(l => l.email && !existingEmails.has(l.email.toLowerCase()) && !seenInBatch.has(l.email.toLowerCase()))
                 .map(l => {
                     seenInBatch.add(l.email.toLowerCase());
@@ -81,15 +116,17 @@ const InternalSuppressionManager = () => {
                 return;
             }
 
-            // 4. Batch insert (Supabase handles up to a few thousand well)
-            // If there's a lot, we might need chunks, but for now we'll try one batch or simple loop
-            const { error: insertError } = await supabase
-                .from('internal_suppression_list')
-                .insert(toInsert);
+            // 4. Batch insert in chunks of 500 to avoid request size limits
+            const CHUNK_SIZE = 500;
+            for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+                const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+                const { error: insertError } = await supabase
+                    .from('internal_suppression_list')
+                    .insert(chunk);
+                if (insertError) throw insertError;
+            }
 
-            if (insertError) throw insertError;
-
-            alert(`Successfully synced ${toInsert.length} historical leads to the suppression list!`);
+            alert(`Successfully synced ${toInsert.length} additional historical leads to the suppression list!`);
             loadRecords();
         } catch (err) {
             console.error('Sync failed:', err);
