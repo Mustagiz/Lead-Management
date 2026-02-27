@@ -484,6 +484,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
     const employeeSizes = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001-10000', '10,000+'];
     const vvStatusOptions = ['RPC Verified', 'RPC Voice Mail', 'Dail by Name', 'Operator Verified', 'Company Verified'];
 
+    const [validationLists, setValidationLists] = useState({ suppression: [], accounts: [], accountListEnabled: false });
+
     useEffect(() => {
         const fetchCampaigns = async () => {
             const { data: activeCampaigns, error } = await supabase
@@ -496,6 +498,30 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         };
         fetchCampaigns();
     }, []);
+
+    const fetchValidationLists = useCallback(async (campaignName) => {
+        if (!campaignName) return;
+
+        const campaignObj = campaigns.find(c => c.name === campaignName);
+        if (!campaignObj) return;
+
+        const [suppressionRes, accountsRes] = await Promise.all([
+            supabase.from('suppression_list').select('*').eq('campaign_id', campaignObj.id),
+            supabase.from('campaign_account_list').select('*').eq('campaign_id', campaignObj.id).eq('is_active', true)
+        ]);
+
+        setValidationLists({
+            suppression: suppressionRes.data || [],
+            accounts: accountsRes.data || [],
+            accountListEnabled: !!campaignObj.account_list_enabled
+        });
+    }, [campaigns]);
+
+    useEffect(() => {
+        if (formData.campaign) {
+            fetchValidationLists(formData.campaign);
+        }
+    }, [formData.campaign, fetchValidationLists]);
 
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -572,6 +598,46 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         return /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(phone);
     };
 
+    const validateLead = (lead) => {
+        // 1. Suppression List Check
+        const email = (lead.email || '').toLowerCase();
+        const phone = (lead.phone_no || lead.phone || '').replace(/\D/g, '');
+        const domain = (lead.domain || (email.split('@')[1]) || '').toLowerCase();
+
+        for (const entry of validationLists.suppression) {
+            const val = entry.identifier_value.toLowerCase();
+            if (entry.identifier_type === 'email' && val === email) {
+                return { status: 'rejected', reason: 'Suppression list match (Email)' };
+            }
+            if (entry.identifier_type === 'phone' && val.replace(/\D/g, '') === phone && phone !== '') {
+                return { status: 'rejected', reason: 'Suppression list match (Phone)' };
+            }
+            if (entry.identifier_type === 'domain' && domain.endsWith(val)) {
+                return { status: 'rejected', reason: 'Suppression list match (Domain)' };
+            }
+        }
+
+        // 2. Account List (Whitelist) Check
+        if (validationLists.accountListEnabled) {
+            const companyName = (lead.company_name || '').toLowerCase();
+            const companyDomain = (lead.domain || '').toLowerCase();
+            const accountId = (lead.account_id || '').toLowerCase();
+
+            const match = validationLists.accounts.find(account => {
+                if (account.account_domain && companyDomain.endsWith(account.account_domain.toLowerCase())) return true;
+                if (account.account_name && companyName.includes(account.account_name.toLowerCase())) return true;
+                if (account.account_id && accountId === account.account_id.toLowerCase()) return true;
+                return false;
+            });
+
+            if (!match) {
+                return { status: 'rejected', reason: 'Invalid Account list' };
+            }
+        }
+
+        return { status: 'valid' };
+    };
+
     const handleEnrich = async () => {
         if (!formData.company_name) {
             alert('Please enter a company name first.');
@@ -627,35 +693,25 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         }
 
         const submitData = async () => {
+            // New Suppression & Account List Validation
+            const validation = validateLead(formData);
+            if (validation.status === 'rejected') {
+                setErrors(prev => ({ ...prev, general: validation.reason }));
+                alert(`Lead rejected: ${validation.reason}`);
+                return;
+            }
+
             // Professional email check
             if (formData.email && !isProfessionalEmail(formData.email)) {
                 setErrors(prev => ({ ...prev, email: 'Please use a professional/corporate email address (no Gmail, Yahoo, etc.)' }));
                 return;
             }
 
-            // Campaign-specific duplicate check
-            if (!leadToEdit) {
-                const { data: existingLeads } = await supabase
-                    .from('leads')
-                    .select('id, company_name, campaign')
-                    .eq('email', formData.email)
-                    .eq('campaign', formData.campaign);
-
-                if (existingLeads && existingLeads.length > 0) {
-                    setErrors(prev => ({ ...prev, email: `This email already exists in campaign "${formData.campaign}". Duplicate leads in the same campaign are not allowed.` }));
-                    return;
-                }
-            } else if (leadToEdit.email !== formData.email) {
-                const { data: existingLeads } = await supabase
-                    .from('leads')
-                    .select('id, company_name, campaign')
-                    .eq('email', formData.email)
-                    .eq('campaign', leadToEdit.campaign);
-
-                if (existingLeads && existingLeads.length > 0) {
-                    setErrors(prev => ({ ...prev, email: `This email already exists in campaign "${leadToEdit.campaign}".` }));
-                    return;
-                }
+            // Campaign-specific duplicate check is now handled by useEffect and checkDuplicateEmail
+            // No need for explicit check here, as errors will be set by useEffect if duplicate exists
+            if (errors.email && errors.email.includes('already exists')) {
+                alert('Lead rejected: ' + errors.email);
+                return;
             }
 
             if (leadToEdit) {
@@ -883,9 +939,9 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     'linkedin_profile': ['linkedin', 'linkedin profile', 'linkedin url', 'profile url', 'url'],
                     'id': ['id', 'lead id', 'lead_id', 'record id'],
                     'status': ['status', 'state', 'lead status', 'current status', 'leadstatus', 'lead_status', 'lead-status', 'currentstatus'],
-                    'industry_type_link': ['industry link', 'industry type link', 'industry_link', 'industry_type_link', 'industry l', 'industry-link', 'industrylink'],
                     'employee_size_link': ['employee size link', 'employee_size_link', 'staff size link', 'employee size l', 'employee-size-link', 'employeesizelink'],
-                    'revenue_size_link': ['revenue link', 'revenue size link', 'revenue_link', 'revenue_size_link', 'revenue size l', 'revenue l', 'revenue !', 'revenue-link', 'revenuelink']
+                    'revenue_size_link': ['revenue link', 'revenue size link', 'revenue_link', 'revenue_size_link', 'revenue size l', 'revenue l', 'revenue !', 'revenue-link', 'revenuelink'],
+                    'account_id': ['account id', 'account_id', 'client id', 'external id']
                 };
 
                 const getValue = (cols, fieldKey) => {
@@ -1090,6 +1146,10 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     setField('ra_comments', 'ra comments');
                     setField('linkedin_url', 'linkedin url');
 
+                    // Capture account_id for validation purposes even if not in DB
+                    const accId = getValue(columns, 'account_id');
+                    if (accId) leadData.account_id = accId;
+
                     if (Object.keys(customQuestionResponses).length > 0) {
                         leadData.custom_question_responses = customQuestionResponses;
                     }
@@ -1139,6 +1199,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 const finalLeads = [];
                 let dbDuplicateCount = 0;
                 let campaignDuplicateCount = 0;
+                let suppressionMatchCount = 0;
+                let invalidAccountCount = 0;
 
                 for (const nl of newLeads) {
                     let existingById = null;
@@ -1148,11 +1210,23 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         // Update existing lead found by ID
                         dbDuplicateCount++;
                         if (updateExistingLeads) {
-                            const { employee_id, ra_name, id, ...updateData } = nl;
+                            const { employee_id, ra_name, id, account_id, ...updateData } = nl;
                             finalLeads.push({ ...updateData, id: existingById.id });
                         } else {
                             addRejectedRow(nl._originalColumns, 'Lead with this ID already exists');
                         }
+                        continue;
+                    }
+
+                    // New Suppression & Account List Validation
+                    const validation = validateLead(nl);
+                    if (validation.status === 'rejected') {
+                        if (validation.reason.includes('Suppression')) {
+                            suppressionMatchCount++;
+                        } else if (validation.reason.includes('Account')) {
+                            invalidAccountCount++;
+                        }
+                        addRejectedRow(nl._originalColumns, validation.reason);
                         continue;
                     }
 
@@ -1161,21 +1235,14 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                         const campaignKey = `${nl.email.toLowerCase()}::${(nl.campaign || '').toLowerCase()}`;
                         if (existingInfoMap.byEmailCampaign[campaignKey]) {
                             campaignDuplicateCount++;
-                            // Re-calculate row data for rejection export
-                            // We need to map nl back to its columns. Since newLeads was created in order, 
-                            // we can track the original row index or columns if we stored them.
-                            // To be safe, let's modify the newLeads push to include the columns.
                             addRejectedRow(nl._originalColumns, `Duplicate email in campaign "${nl.campaign}"`);
                             continue; // Reject - duplicate in same campaign
                         }
                     }
 
-                    const { id, ...insertData } = nl;
+                    const { id, account_id, ...insertData } = nl;
                     finalLeads.push(insertData);
                 }
-
-
-
 
                 const insertBatchSize = 100;
                 let successCount = 0;
@@ -1207,6 +1274,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     dbDuplicateCount,
                     internalDuplicateCount,
                     campaignDuplicateCount,
+                    suppressionMatchCount,
+                    invalidAccountCount,
                     invalidEmailCount,
                     skippedCount,
                     missingCampaignCount,
@@ -1245,7 +1314,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                 <p className="text-gray-500 dark:text-gray-400 text-lg">Your data has been processed successfully.</p>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
                                 <div className="p-5 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/20 rounded-2xl">
                                     <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">Total Records</p>
                                     <p className="text-4xl font-extrabold text-indigo-900 dark:text-indigo-100">{uploadResult.totalRows}</p>
@@ -1270,13 +1339,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                                     <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">DB Duplicates</p>
                                     <p className="text-4xl font-extrabold text-amber-900 dark:text-amber-100">{uploadResult.dbDuplicateCount}</p>
                                 </div>
+                                <div className="p-5 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-2xl">
+                                    <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-2">Suppression</p>
+                                    <p className="text-4xl font-extrabold text-red-900 dark:text-red-100">{uploadResult.suppressionMatchCount || 0}</p>
+                                </div>
+                                <div className="p-5 bg-fuchsia-50 dark:bg-fuchsia-900/10 border border-fuchsia-100 dark:border-fuchsia-900/20 rounded-2xl">
+                                    <p className="text-xs font-bold text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-widest mb-2">Invalid Acc</p>
+                                    <p className="text-4xl font-extrabold text-fuchsia-900 dark:text-fuchsia-100">{uploadResult.invalidAccountCount || 0}</p>
+                                </div>
                                 <div className="p-5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl">
                                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Skipped Rows</p>
                                     <p className="text-4xl font-extrabold text-slate-900 dark:text-slate-100">{uploadResult.skippedCount}</p>
                                 </div>
 
                                 {uploadResult.rejectedLeads?.length > 0 && (
-                                    <div className="mb-8">
+                                    <div className="col-span-2 sm:col-span-4 mt-4">
                                         <button
                                             onClick={downloadRejectedLeads}
                                             className="w-full py-4 px-6 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/20 rounded-2xl text-rose-600 dark:text-rose-400 font-bold flex items-center justify-center gap-3 hover:bg-rose-100 dark:hover:bg-rose-900/20 transition-all group"

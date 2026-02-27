@@ -7,7 +7,13 @@ import { Button, Input, Card } from '../common/UIComponents';
 const CampaignModal = ({ campaign, onClose, onSuccess }) => {
     const { currentUser } = useAuth();
     const [formData, setFormData] = useState(
-        campaign ? { ...campaign } : { name: '', description: '', isActive: true, customQuestions: [] }
+        campaign ? { ...campaign } : {
+            name: '',
+            description: '',
+            isActive: true,
+            account_list_enabled: false,
+            customQuestions: []
+        }
     );
 
     const handleSubmit = async (e) => {
@@ -20,6 +26,7 @@ const CampaignModal = ({ campaign, onClose, onSuccess }) => {
                     name: formData.name,
                     description: formData.description,
                     is_active: formData.isActive,
+                    account_list_enabled: formData.account_list_enabled,
                     custom_questions: formData.customQuestions
                 })
                 .eq('id', campaign.id);
@@ -35,6 +42,7 @@ const CampaignModal = ({ campaign, onClose, onSuccess }) => {
                     name: formData.name,
                     description: formData.description,
                     is_active: formData.isActive,
+                    account_list_enabled: formData.account_list_enabled,
                     custom_questions: formData.customQuestions,
                     created_by: currentUser.name
                 });
@@ -122,7 +130,7 @@ const CampaignModal = ({ campaign, onClose, onSuccess }) => {
                         </div>
                     </div>
 
-                    <div className="mb-4">
+                    <div className="flex flex-col gap-3 mb-6">
                         <label className="flex items-center">
                             <input
                                 type="checkbox"
@@ -131,6 +139,16 @@ const CampaignModal = ({ campaign, onClose, onSuccess }) => {
                                 className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                             />
                             <span className="ml-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Active Campaign</span>
+                        </label>
+
+                        <label className="flex items-center">
+                            <input
+                                type="checkbox"
+                                checked={formData.account_list_enabled}
+                                onChange={(e) => setFormData({ ...formData, account_list_enabled: e.target.checked })}
+                                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                            />
+                            <span className="ml-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Enable Account Whitelist</span>
                         </label>
                     </div>
 

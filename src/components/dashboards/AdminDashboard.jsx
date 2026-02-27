@@ -13,6 +13,8 @@ import CampaignModal from '../modals/CampaignModal';
 import ConfirmationModal from '../modals/ConfirmationModal';
 import AdminBreakHistoryModal from '../modals/AdminBreakHistoryModal';
 import LiveFeedTicker from '../common/LiveFeedTicker';
+import SuppressionListManager from '../admin/SuppressionListManager';
+import AccountListManager from '../admin/AccountListManager';
 
 const AdminDashboard = () => {
     const { currentUser } = useAuth();
@@ -462,6 +464,8 @@ const AdminDashboard = () => {
                         { id: 'pipeline', icon: GitBranch, label: 'Pipeline' },
                         { id: 'users', icon: Shield, label: 'Manage Users' },
                         { id: 'campaigns', icon: Plus, label: 'Campaigns' },
+                        { id: 'suppression', icon: XCircle, label: 'Suppression' },
+                        { id: 'accounts', icon: Shield, label: 'Account List' },
                         { id: 'breaks', icon: Coffee, label: 'Breaks' },
                         { id: 'reports', icon: BarChart3, label: 'Reports' },
                     ].map(tab => (
@@ -794,6 +798,14 @@ const AdminDashboard = () => {
                         )}
                     </Card>
                 </div>
+            )}
+
+            {activeTab === 'suppression' && (
+                <SuppressionListManager campaigns={campaigns} currentUser={currentUser} />
+            )}
+
+            {activeTab === 'accounts' && (
+                <AccountListManager campaigns={campaigns} currentUser={currentUser} />
             )}
 
             {activeTab === 'breaks' && (
