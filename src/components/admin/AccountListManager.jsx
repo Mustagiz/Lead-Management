@@ -11,6 +11,11 @@ const AccountListManager = ({ campaigns, currentUser }) => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [newEntry, setNewEntry] = useState({ name: '', domain: '', accountId: '' });
     const [editingId, setEditingId] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+    const [bulkEditData, setBulkEditData] = useState({ name: '', domain: '', accountId: '' });
+    const ITEMS_PER_PAGE = 10;
 
     const fetchList = useCallback(async () => {
         if (!selectedCampaignId) {
@@ -24,7 +29,11 @@ const AccountListManager = ({ campaigns, currentUser }) => {
             .eq('campaign_id', selectedCampaignId)
             .order('added_at', { ascending: false });
 
-        if (!error) setList(data || []);
+        if (!error) {
+            setList(data || []);
+            setCurrentPage(1);
+            setSelectedIds([]);
+        }
         setIsLoading(false);
     }, [selectedCampaignId]);
 
@@ -80,6 +89,75 @@ const AccountListManager = ({ campaigns, currentUser }) => {
         const { error } = await supabase.from('campaign_account_list').delete().eq('id', id);
         if (!error) fetchList();
         else alert('Error deleting: ' + error.message);
+    };
+
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} accounts?`)) return;
+        const { error } = await supabase
+            .from('campaign_account_list')
+            .delete()
+            .in('id', selectedIds);
+
+        if (!error) {
+            fetchList();
+            setSelectedIds([]);
+        } else {
+            alert('Error in bulk delete: ' + error.message);
+        }
+    };
+
+    const handleBulkEdit = async () => {
+        const updateData = {};
+        if (bulkEditData.name) updateData.account_name = bulkEditData.name;
+        if (bulkEditData.domain) updateData.account_domain = bulkEditData.domain;
+        if (bulkEditData.accountId) updateData.account_id = bulkEditData.accountId;
+
+        if (Object.keys(updateData).length === 0) {
+            alert('Please fill at least one field to update');
+            return;
+        }
+
+        const { error } = await supabase
+            .from('campaign_account_list')
+            .update(updateData)
+            .in('id', selectedIds);
+
+        if (!error) {
+            setShowBulkEditModal(false);
+            setSelectedIds([]);
+            fetchList();
+            setBulkEditData({ name: '', domain: '', accountId: '' });
+        } else {
+            alert('Error in bulk edit: ' + error.message);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === paginatedList.length && paginatedList.length > 0) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(paginatedList.map(item => item.id));
+        }
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const handleDeleteAll = async () => {
+        if (!window.confirm(`WARNING: This will delete ALL ${list.length} accounts for this campaign. This action cannot be undone. Are you sure?`)) return;
+
+        const { error } = await supabase
+            .from('campaign_account_list')
+            .delete()
+            .eq('campaign_id', selectedCampaignId);
+
+        if (!error) {
+            fetchList();
+            setSelectedIds([]);
+        } else {
+            alert('Error deleting all accounts: ' + error.message);
+        }
     };
 
     const handleBulkUpload = (e) => {
@@ -151,6 +229,14 @@ const AccountListManager = ({ campaigns, currentUser }) => {
         (item.account_id || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const paginatedList = filteredList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredList.length / ITEMS_PER_PAGE);
+
+    useEffect(() => {
+        setCurrentPage(1);
+        setSelectedIds([]);
+    }, [searchTerm]);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -216,10 +302,32 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                         </button>
                     </div>
 
+                    {selectedIds.length > 0 && (
+                        <div className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-800/20 flex items-center justify-between animate-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{selectedIds.length} selected</span>
+                                <div className="h-4 w-px bg-indigo-200 dark:bg-indigo-800/30" />
+                                <div className="flex gap-2">
+                                    <button onClick={() => setShowBulkEditModal(true)} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline">Bulk Edit</button>
+                                    <button onClick={handleBulkDelete} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline">Delete Selected</button>
+                                </div>
+                            </div>
+                            <button onClick={handleDeleteAll} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline">Delete All Records</button>
+                        </div>
+                    )}
+
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50 dark:bg-slate-800/50">
                                 <tr>
+                                    <th className="px-6 py-4 text-left">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.length === paginatedList.length && paginatedList.length > 0}
+                                            onChange={toggleSelectAll}
+                                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                    </th>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Account Name</th>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Domain</th>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Account ID</th>
@@ -229,11 +337,17 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                             <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                                 {isLoading ? (
                                     <tr><td colSpan="4" className="px-6 py-10 text-center text-gray-500">Loading accounts...</td></tr>
-                                ) : filteredList.length === 0 ? (
-                                    <tr><td colSpan="4" className="px-6 py-10 text-center text-gray-500">No accounts found matching your search.</td></tr>
                                 ) : (
-                                    filteredList.map(item => (
-                                        <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors">
+                                    paginatedList.map(item => (
+                                        <tr key={item.id} className={`hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors ${selectedIds.includes(item.id) ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(item.id)}
+                                                    onChange={() => toggleSelect(item.id)}
+                                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
                                                 {item.account_name || <span className="text-gray-400 italic">No name</span>}
                                             </td>
@@ -267,7 +381,55 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                             </tbody>
                         </table>
                     </div>
+                    {totalPages > 1 && (
+                        <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between bg-gray-50/30 dark:bg-slate-800/10">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <div className="flex gap-2">
+                                <Button variant="secondary" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="py-1 px-4 text-xs font-bold">Prev</Button>
+                                <Button variant="secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="py-1 px-4 text-xs font-bold">Next</Button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
+            )}
+
+            {showBulkEditModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+                    <Card className="w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Bulk Edit Accounts</h3>
+                            <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <Input
+                                label="Update Company Name"
+                                placeholder="Leave blank to keep original"
+                                value={bulkEditData.name}
+                                onChange={(e) => setBulkEditData({ ...bulkEditData, name: e.target.value })}
+                            />
+                            <Input
+                                label="Update Domain"
+                                placeholder="Leave blank to keep original"
+                                value={bulkEditData.domain}
+                                onChange={(e) => setBulkEditData({ ...bulkEditData, domain: e.target.value })}
+                            />
+                            <Input
+                                label="Update Account ID"
+                                placeholder="Leave blank to keep original"
+                                value={bulkEditData.accountId}
+                                onChange={(e) => setBulkEditData({ ...bulkEditData, accountId: e.target.value })}
+                            />
+                            <div className="flex justify-end gap-3 mt-8">
+                                <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>Cancel</Button>
+                                <Button onClick={handleBulkEdit}>Apply to {selectedIds.length} accounts</Button>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
             )}
 
             {showAddModal && (
