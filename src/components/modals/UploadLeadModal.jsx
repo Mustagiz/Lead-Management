@@ -1185,7 +1185,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 for (let i = 0; i < leadsToUpsert.length; i += insertBatchSize) {
                     const batch = leadsToUpsert.slice(i, i + insertBatchSize);
                     for (const record of batch) {
-                        const { id, ...updateFields } = record;
+                        const { id, _originalColumns, ...updateFields } = record;
                         const { error } = await supabase.from('leads').update(updateFields).eq('id', id);
                         if (error) { alert(`Error updating lead: ${error.message}`); return; }
                     }
@@ -1194,7 +1194,9 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
                 for (let i = 0; i < leadsToInsert.length; i += insertBatchSize) {
                     const batch = leadsToInsert.slice(i, i + insertBatchSize);
-                    const { error } = await supabase.from('leads').insert(batch);
+                    // Remove _originalColumns from all records in the batch before inserting
+                    const cleanBatch = batch.map(({ _originalColumns, ...rest }) => rest);
+                    const { error } = await supabase.from('leads').insert(cleanBatch);
                     if (error) { alert(`Error inserting records: ${error.message}`); return; }
                     successCount += batch.length;
                 }
