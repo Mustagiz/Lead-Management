@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Trash2, Plus, Upload, X, Search, Download, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
-import { Button, Input, Card, Badge, SearchableSelect } from '../common/UIComponents';
+import { Button, Input, Card, SearchableSelect } from '../common/UIComponents';
 
 const AccountListManager = ({ campaigns, currentUser }) => {
     const [selectedCampaignId, setSelectedCampaignId] = useState('');
