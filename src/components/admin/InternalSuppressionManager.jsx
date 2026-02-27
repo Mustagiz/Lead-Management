@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Shield, RefreshCw, Globe } from 'lucide-react';
+import { Search, Download, Shield, RefreshCw, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Button, Card, StatCard } from '../common/UIComponents';
 
@@ -13,6 +13,8 @@ const InternalSuppressionManager = () => {
         campaignsCovered: 0
     });
     const [syncing, setSyncing] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const loadRecords = async () => {
         setLoading(true);
@@ -52,6 +54,7 @@ const InternalSuppressionManager = () => {
             console.error('Error fetching internal suppression:', error);
         } finally {
             setLoading(false);
+            setCurrentPage(1);
         }
     };
 
@@ -151,6 +154,7 @@ const InternalSuppressionManager = () => {
             (r.company || '').toLowerCase().includes(query)
         );
         setFilteredRecords(filtered);
+        setCurrentPage(1);
     };
 
     const downloadCSV = () => {
@@ -184,6 +188,11 @@ const InternalSuppressionManager = () => {
         link.click();
         document.body.removeChild(link);
     };
+
+    const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentRecords = filteredRecords.slice(indexOfFirstItem, indexOfLastItem);
 
     return (
         <div className="space-y-6">
@@ -251,12 +260,12 @@ const InternalSuppressionManager = () => {
                                 <tr>
                                     <td colSpan="6" className="px-6 py-12 text-center text-slate-400">Loading records...</td>
                                 </tr>
-                            ) : filteredRecords.length === 0 ? (
+                            ) : currentRecords.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="px-6 py-12 text-center text-slate-400">No suppression records found.</td>
                                 </tr>
                             ) : (
-                                filteredRecords.map((record) => (
+                                currentRecords.map((record) => (
                                     <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">
                                             {record.campaign_name}
@@ -282,6 +291,41 @@ const InternalSuppressionManager = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {filteredRecords.length > itemsPerPage && (
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        <p className="text-sm text-slate-500">
+                            Showing <span className="font-semibold text-slate-900 dark:text-slate-100">{indexOfFirstItem + 1}</span> to <span className="font-semibold text-slate-900 dark:text-slate-100">{Math.min(indexOfLastItem, filteredRecords.length)}</span> of <span className="font-semibold text-slate-900 dark:text-slate-100">{filteredRecords.length}</span> records
+                        </p>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                icon={ChevronLeft}
+                            >
+                                Previous
+                            </Button>
+                            <div className="flex items-center gap-1 px-4">
+                                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{currentPage}</span>
+                                <span className="text-sm text-slate-400">/</span>
+                                <span className="text-sm text-slate-500">{totalPages}</span>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                icon={ChevronRight}
+                                iconPosition="right"
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </Card>
         </div>
     );
