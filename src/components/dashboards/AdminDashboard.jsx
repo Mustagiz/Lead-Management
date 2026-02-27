@@ -470,7 +470,7 @@ const AdminDashboard = () => {
                         { id: 'accounts', icon: Shield, label: 'Account List' },
                         { id: 'breaks', icon: Coffee, label: 'Breaks' },
                         { id: 'reports', icon: BarChart3, label: 'Reports' },
-                        { id: 'upload_history', icon: History, label: 'Upload History' },
+                        { id: 'log', icon: History, label: 'LOG' },
                         { id: 'internal_suppression', icon: Shield, label: 'Internal Suppression' },
                         { id: 'monitoring', icon: Coffee, label: 'Break Monitoring' },
                     ].map(tab => (
@@ -882,7 +882,7 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {activeTab === 'upload_history' && (
+            {activeTab === 'log' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <UploadHistory role="admin" />
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Download, Calendar, FileText, Search, User, Filter, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Download, Search, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Clock, Filter, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Card, Button, Input } from '../common/UIComponents';
 
@@ -9,6 +9,9 @@ const UploadHistory = ({ userId, role }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [employeeQuery, setEmployeeQuery] = useState('');
     const itemsPerPage = 10;
 
     const fetchHistory = useCallback(async () => {
@@ -24,7 +27,18 @@ const UploadHistory = ({ userId, role }) => {
             }
 
             if (searchTerm) {
-                query = query.or(`file_name.ilike.%${searchTerm}%,campaign_name.ilike.%${searchTerm}%,employee_name.ilike.%${searchTerm}%`);
+                query = query.or(`file_name.ilike.%${searchTerm}%,campaign_name.ilike.%${searchTerm}%`);
+            }
+
+            if (employeeQuery) {
+                query = query.ilike('employee_name', `%${employeeQuery}%`);
+            }
+
+            if (startDate) {
+                query = query.gte('created_at', `${startDate}T00:00:00`);
+            }
+            if (endDate) {
+                query = query.lte('created_at', `${endDate}T23:59:59`);
             }
 
             const from = (currentPage - 1) * itemsPerPage;
@@ -42,7 +56,7 @@ const UploadHistory = ({ userId, role }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [userId, role, currentPage, searchTerm]);
+    }, [userId, role, currentPage, searchTerm, employeeQuery, startDate, endDate]);
 
     useEffect(() => {
         fetchHistory();
@@ -50,6 +64,14 @@ const UploadHistory = ({ userId, role }) => {
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
+        setCurrentPage(1);
+    };
+
+    const clearFilters = () => {
+        setSearchTerm('');
+        setEmployeeQuery('');
+        setStartDate('');
+        setEndDate('');
         setCurrentPage(1);
     };
 
@@ -109,26 +131,73 @@ const UploadHistory = ({ userId, role }) => {
     return (
         <Card className="overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-gray-100 dark:border-slate-800 shadow-xl">
             {/* Header / Filter Area */}
-            <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex flex-col md:row justify-between items-center gap-4 bg-gray-50/50 dark:bg-slate-800/30">
-                <div className="relative w-full md:w-96">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">Search History</label>
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">File or Campaign</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search leads..."
+                                value={searchTerm}
+                                onChange={handleSearch}
+                                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    {role === 'admin' && (
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">Employee Name</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search RA..."
+                                    value={employeeQuery}
+                                    onChange={(e) => { setEmployeeQuery(e.target.value); setCurrentPage(1); }}
+                                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">From Date</label>
                         <input
-                            type="text"
-                            placeholder="Search by filename, campaign, or RA..."
-                            value={searchTerm}
-                            onChange={handleSearch}
-                            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                            className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">To Date</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                            className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                         />
                     </div>
                 </div>
 
-                <div className="flex gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => fetchHistory()} disabled={isLoading}>
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                        Refresh
-                    </Button>
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100 dark:border-slate-800">
+                    <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => fetchHistory()} disabled={isLoading}>
+                            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={clearFilters}>
+                            <X className="w-4 h-4 mr-2" />
+                            Clear Filters
+                        </Button>
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {totalCount} Log RecordsFound
+                    </div>
                 </div>
             </div>
 
