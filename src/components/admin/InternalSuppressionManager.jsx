@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Shield, Filter, RefreshCw, BarChart3, Users, Globe } from 'lucide-react';
+import { Search, Download, Shield, RefreshCw, Globe } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
-import { Button, Input, Card, Badge, StatCard } from '../common/UIComponents';
+import { Button, Card, StatCard } from '../common/UIComponents';
 
 const InternalSuppressionManager = () => {
     const [records, setRecords] = useState([]);
