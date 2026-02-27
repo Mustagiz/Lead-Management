@@ -11,7 +11,7 @@ END $$;
 -- 2. Create Suppression List table
 CREATE TABLE IF NOT EXISTS suppression_list (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    campaign_id UUID NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    campaign_id BIGINT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     identifier_type suppression_identifier_type NOT NULL,
     identifier_value TEXT NOT NULL,
     added_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS suppression_list (
 -- 3. Create Account Whitelist table
 CREATE TABLE IF NOT EXISTS campaign_account_list (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    campaign_id UUID NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    campaign_id BIGINT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     account_name TEXT,
     account_domain TEXT,
     account_id TEXT,
