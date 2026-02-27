@@ -1321,7 +1321,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     successCount += batch.length;
                 }
 
-                setUploadResult({
+                const finalUploadResult = {
                     totalRows: rows.length - 1,
                     successCount,
                     dbDuplicateCount,
@@ -1333,7 +1333,34 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     skippedCount,
                     missingCampaignCount,
                     rejectedLeads: rejectedRows
-                });
+                };
+
+                setUploadResult(finalUploadResult);
+
+                // Log to Upload History
+                const logUploadHistory = async () => {
+                    try {
+                        await supabase.from('upload_history').insert([{
+                            file_name: csvFile.name,
+                            campaign_name: formData.campaign,
+                            total_records: finalUploadResult.totalRows,
+                            submitted_count: finalUploadResult.successCount + finalUploadResult.dbDuplicateCount + finalUploadResult.campaignDuplicateCount + finalUploadResult.internalDuplicateCount + finalUploadResult.suppressionMatchCount + finalUploadResult.invalidAccountCount + finalUploadResult.invalidEmailCount,
+                            errors_count: finalUploadResult.skippedCount + finalUploadResult.missingCampaignCount,
+                            n_count: finalUploadResult.successCount,
+                            a_count: finalUploadResult.dbDuplicateCount + finalUploadResult.campaignDuplicateCount + finalUploadResult.internalDuplicateCount,
+                            b_count: finalUploadResult.invalidEmailCount + finalUploadResult.invalidAccountCount,
+                            r_count: finalUploadResult.suppressionMatchCount,
+                            upload_status: 'Processed',
+                            employee_id: employeeId,
+                            employee_name: employeeName,
+                            rejected_leads_json: finalUploadResult.rejectedLeads
+                        }]);
+                    } catch (err) {
+                        console.error('Error logging upload history:', err);
+                    }
+                };
+                logUploadHistory();
+
                 onSuccess();
             };
             processRows();

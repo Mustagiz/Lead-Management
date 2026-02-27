@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BarChart3, Users, Shield, Coffee, RefreshCw, Download, Upload, Filter, Trash2, Edit, Plus, AlertTriangle, Eye, CheckCircle, XCircle, GitBranch } from 'lucide-react';
+import { BarChart3, Users, Shield, Coffee, RefreshCw, Download, Upload, Filter, Trash2, Edit, Plus, AlertTriangle, Eye, CheckCircle, XCircle, GitBranch, History } from 'lucide-react';
 import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar } from 'recharts';
 import LeadDetailDrawer from '../modals/LeadDetailDrawer';
 import LeadPipelineView from './LeadPipelineView';
@@ -16,6 +16,7 @@ import LiveFeedTicker from '../common/LiveFeedTicker';
 import SuppressionListManager from '../admin/SuppressionListManager';
 import AccountListManager from '../admin/AccountListManager';
 import InternalSuppressionManager from '../admin/InternalSuppressionManager';
+import UploadHistory from '../admin/UploadHistory';
 
 const AdminDashboard = () => {
     const { currentUser } = useAuth();
@@ -469,6 +470,7 @@ const AdminDashboard = () => {
                         { id: 'accounts', icon: Shield, label: 'Account List' },
                         { id: 'breaks', icon: Coffee, label: 'Breaks' },
                         { id: 'reports', icon: BarChart3, label: 'Reports' },
+                        { id: 'upload_history', icon: History, label: 'Upload History' },
                         { id: 'internal_suppression', icon: Shield, label: 'Internal Suppression' },
                         { id: 'monitoring', icon: Coffee, label: 'Break Monitoring' },
                     ].map(tab => (
@@ -877,6 +879,12 @@ const AdminDashboard = () => {
             {activeTab === 'internal_suppression' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <InternalSuppressionManager />
+                </div>
+            )}
+
+            {activeTab === 'upload_history' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <UploadHistory role="admin" />
                 </div>
             )}
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Coffee, BarChart3, CheckCircle, XCircle, Clock, Filter, RefreshCw, Download, Eye, Users, Plus, Shield } from 'lucide-react';
+import { Coffee, BarChart3, CheckCircle, XCircle, Clock, Filter, RefreshCw, Download, Eye, Users, Plus, Shield, History } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
 import { Button, Input, SearchableSelect, Card, Badge, StatCard } from '../common/UIComponents';
 import UploadLeadModal from '../modals/UploadLeadModal';
 import InternalSuppressionManager from '../admin/InternalSuppressionManager';
+import UploadHistory from '../admin/UploadHistory';
 
 const EmployeeDashboard = () => {
     const { currentUser } = useAuth();
@@ -282,6 +283,7 @@ const EmployeeDashboard = () => {
                 <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50 flex-1">
                     {[
                         { id: 'leads', icon: Users, label: 'My Leads' },
+                        { id: 'upload_history', icon: History, label: 'Upload History' },
                         { id: 'internal_suppression', icon: Shield, label: 'Internal Suppression' },
                         { id: 'breaks', icon: Coffee, label: 'Break Management' },
                     ].map(tab => (
@@ -304,6 +306,12 @@ const EmployeeDashboard = () => {
             {activeTab === 'internal_suppression' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <InternalSuppressionManager />
+                </div>
+            )}
+
+            {activeTab === 'upload_history' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <UploadHistory userId={currentUser.id} role="employee" />
                 </div>
             )}
 
