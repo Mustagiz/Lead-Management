@@ -68,20 +68,44 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
         reader.onload = async (evt) => {
             const text = evt.target.result;
             const rows = text.split('\n').map(r => r.trim()).filter(Boolean);
-            // Assume format: type,value (type is optional, default email if not recognized)
+            if (rows.length < 2) {
+                alert('CSV must contain at least a header and one data row');
+                return;
+            }
+
+            const headers = rows[0].toLowerCase().split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+            const typeIndex = headers.indexOf('identifier_type') !== -1 ? headers.indexOf('identifier_type') : headers.indexOf('type');
+            const valueIndex = headers.indexOf('identifier_value') !== -1 ? headers.indexOf('identifier_value') :
+                (headers.indexOf('value') !== -1 ? headers.indexOf('value') : headers.indexOf('identifier'));
+
             const entries = rows.slice(1).map(row => {
                 const parts = row.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
                 let type = 'email';
                 let value = '';
-                if (parts.length >= 2) {
-                    type = ['email', 'phone', 'domain'].includes(parts[0].toLowerCase()) ? parts[0].toLowerCase() : 'email';
-                    value = parts[1];
+
+                if (valueIndex !== -1 && parts[valueIndex]) {
+                    value = parts[valueIndex];
+                    if (typeIndex !== -1 && parts[typeIndex]) {
+                        type = ['email', 'phone', 'domain'].includes(parts[typeIndex].toLowerCase()) ? parts[typeIndex].toLowerCase() : 'email';
+                    } else {
+                        // Auto-detect type if missing
+                        if (value.includes('@')) type = 'email';
+                        else if (value.includes('.') && !/\d/.test(value)) type = 'domain';
+                        else if (/\d/.test(value)) type = 'phone';
+                    }
                 } else {
-                    value = parts[0];
-                    if (value.includes('@')) type = 'email';
-                    else if (value.includes('.') && !/\d/.test(value)) type = 'domain';
-                    else if (/\d/.test(value)) type = 'phone';
+                    // Positional fallback if headers didn't help
+                    if (parts.length >= 2) {
+                        type = ['email', 'phone', 'domain'].includes(parts[0].toLowerCase()) ? parts[0].toLowerCase() : 'email';
+                        value = parts[1];
+                    } else {
+                        value = parts[0];
+                        if (value.includes('@')) type = 'email';
+                        else if (value.includes('.') && !/\d/.test(value)) type = 'domain';
+                        else if (/\d/.test(value)) type = 'phone';
+                    }
                 }
+
                 return {
                     campaign_id: selectedCampaignId,
                     identifier_type: type,
