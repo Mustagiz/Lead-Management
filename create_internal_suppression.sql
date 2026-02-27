@@ -14,20 +14,8 @@ CREATE INDEX IF NOT EXISTS idx_internal_suppression_email ON internal_suppressio
 
 ALTER TABLE internal_suppression_list ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY \
-Authenticated
-users
-can
-view
-internal
-suppression\ ON internal_suppression_list
+CREATE POLICY "Authenticated users can view internal suppression" ON internal_suppression_list
     FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY \Service
-role
-can
-manage
-internal
-suppression\ ON internal_suppression_list
+CREATE POLICY "All users can manage internal suppression" ON internal_suppression_list
     FOR ALL TO authenticated USING (true);
-
