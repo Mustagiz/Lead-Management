@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, Plus, Upload, X, Search, Download } from 'lucide-react';
+import { Trash2, Plus, Upload, X, Search, Download, Edit } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Button, Input, Card, Badge, SearchableSelect } from '../common/UIComponents';
 
@@ -10,6 +10,7 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [newEntry, setNewEntry] = useState({ type: 'email', value: '' });
+    const [editingId, setEditingId] = useState(null);
 
     const fetchList = useCallback(async () => {
         if (!selectedCampaignId) {
@@ -35,21 +36,40 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
         e.preventDefault();
         if (!newEntry.value || !selectedCampaignId) return;
 
-        const { error } = await supabase
-            .from('suppression_list')
-            .insert([{
-                campaign_id: selectedCampaignId,
-                identifier_type: newEntry.type,
-                identifier_value: newEntry.value,
-                added_by: currentUser.id
-            }]);
+        if (editingId) {
+            const { error } = await supabase
+                .from('suppression_list')
+                .update({
+                    identifier_type: newEntry.type,
+                    identifier_value: newEntry.value
+                })
+                .eq('id', editingId);
 
-        if (error) {
-            alert('Error adding identifier: ' + error.message);
+            if (error) {
+                alert('Error updating identifier: ' + error.message);
+            } else {
+                setNewEntry({ type: 'email', value: '' });
+                setEditingId(null);
+                setShowAddModal(false);
+                fetchList();
+            }
         } else {
-            setNewEntry({ ...newEntry, value: '' });
-            setShowAddModal(false);
-            fetchList();
+            const { error } = await supabase
+                .from('suppression_list')
+                .insert([{
+                    campaign_id: selectedCampaignId,
+                    identifier_type: newEntry.type,
+                    identifier_value: newEntry.value,
+                    added_by: currentUser.id
+                }]);
+
+            if (error) {
+                alert('Error adding identifier: ' + error.message);
+            } else {
+                setNewEntry({ type: 'email', value: '' });
+                setShowAddModal(false);
+                fetchList();
+            }
         }
     };
 
@@ -176,7 +196,7 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                                 Bulk Upload
                             </Button>
                         </div>
-                        <Button onClick={() => setShowAddModal(true)} variant="primary" icon={Plus}>
+                        <Button onClick={() => { setEditingId(null); setNewEntry({ type: 'email', value: '' }); setShowAddModal(true); }} variant="primary" icon={Plus}>
                             Add Entry
                         </Button>
                     </div>
@@ -238,7 +258,17 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                                             <td className="px-6 py-4 text-sm text-gray-500">
                                                 {new Date(item.added_at).toLocaleString()}
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setNewEntry({ type: item.identifier_type, value: item.identifier_value });
+                                                        setEditingId(item.id);
+                                                        setShowAddModal(true);
+                                                    }}
+                                                    className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => handleDelete(item.id)}
                                                     className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
@@ -259,8 +289,8 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
                     <Card className="w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add Entry</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Edit Entry' : 'Add Entry'}</h3>
+                            <button onClick={() => { setShowAddModal(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
@@ -285,8 +315,8 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                                 required
                             />
                             <div className="flex justify-end gap-3 mt-8">
-                                <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-                                <Button type="submit">Add to List</Button>
+                                <Button variant="secondary" onClick={() => { setShowAddModal(false); setEditingId(null); }}>Cancel</Button>
+                                <Button type="submit">{editingId ? 'Save Changes' : 'Add to List'}</Button>
                             </div>
                         </form>
                     </Card>

@@ -6,7 +6,13 @@ import { Card } from '../common/UIComponents';
 
 const AdminBreakHistoryModal = ({ user, onClose }) => {
     const [breakData, setBreakData] = useState({ total_break_seconds: 0, breaks: [] });
+    const [now, setNow] = useState(Date.now());
     const today = new Date().toISOString().split('T')[0];
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         const fetchBreaks = async () => {
@@ -30,7 +36,8 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
         return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(hrs > 0 ? 2 : 1, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const totalSecs = breakData.total_break_seconds || 0;
+    const currentBreakSecs = breakData.current_break_start ? Math.floor((now - new Date(breakData.current_break_start).getTime()) / 1000) : 0;
+    const totalSecs = (breakData.total_break_seconds || 0) + currentBreakSecs;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
@@ -54,7 +61,7 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
                         </Card>
                         <Card className="p-4 bg-indigo-50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800/20">
                             <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Break Count</p>
-                            <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{breakData.breaks.length}</p>
+                            <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{breakData.breaks.length + (breakData.current_break_start ? 1 : 0)}</p>
                         </Card>
                     </div>
 
@@ -74,13 +81,21 @@ const AdminBreakHistoryModal = ({ user, onClose }) => {
                                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{new Date(b.startTime).toLocaleTimeString()}</td>
                                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{new Date(b.endTime).toLocaleTimeString()}</td>
                                     <td className="px-4 py-3 text-sm font-medium text-purple-600 dark:text-purple-400">
-                                        {b.durationSeconds
-                                            ? `${Math.floor(b.durationSeconds / 60)}:${(b.durationSeconds % 60).toString().padStart(2, '0')}`
-                                            : `${b.duration} min`}
+                                        {formatTime(b.durationSeconds || b.duration * 60)}
                                     </td>
                                 </tr>
                             ))}
-                            {breakData.breaks.length === 0 && (
+                            {breakData.current_break_start && (
+                                <tr className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{breakData.breaks.length + 1}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{new Date(breakData.current_break_start).toLocaleTimeString()}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">In Progress</td>
+                                    <td className="px-4 py-3 text-sm font-medium text-purple-600 dark:text-purple-400 animate-pulse">
+                                        {formatTime(currentBreakSecs)}
+                                    </td>
+                                </tr>
+                            )}
+                            {breakData.breaks.length === 0 && !breakData.current_break_start && (
                                 <tr>
                                     <td colSpan="4" className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">No breaks taken today.</td>
                                 </tr>

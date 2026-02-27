@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, Plus, Upload, X, Search, Download, ShieldCheck } from 'lucide-react';
+import { Trash2, Plus, Upload, X, Search, Download, ShieldCheck, Edit } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Button, Input, Card, SearchableSelect } from '../common/UIComponents';
 
@@ -10,6 +10,7 @@ const AccountListManager = ({ campaigns, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [newEntry, setNewEntry] = useState({ name: '', domain: '', accountId: '' });
+    const [editingId, setEditingId] = useState(null);
 
     const fetchList = useCallback(async () => {
         if (!selectedCampaignId) {
@@ -35,22 +36,42 @@ const AccountListManager = ({ campaigns, currentUser }) => {
         e.preventDefault();
         if ((!newEntry.name && !newEntry.domain && !newEntry.accountId) || !selectedCampaignId) return;
 
-        const { error } = await supabase
-            .from('campaign_account_list')
-            .insert([{
-                campaign_id: selectedCampaignId,
-                account_name: newEntry.name,
-                account_domain: newEntry.domain,
-                account_id: newEntry.accountId,
-                is_active: true
-            }]);
+        if (editingId) {
+            const { error } = await supabase
+                .from('campaign_account_list')
+                .update({
+                    account_name: newEntry.name,
+                    account_domain: newEntry.domain,
+                    account_id: newEntry.accountId
+                })
+                .eq('id', editingId);
 
-        if (error) {
-            alert('Error adding account: ' + error.message);
+            if (error) {
+                alert('Error updating account: ' + error.message);
+            } else {
+                setNewEntry({ name: '', domain: '', accountId: '' });
+                setEditingId(null);
+                setShowAddModal(false);
+                fetchList();
+            }
         } else {
-            setNewEntry({ name: '', domain: '', accountId: '' });
-            setShowAddModal(false);
-            fetchList();
+            const { error } = await supabase
+                .from('campaign_account_list')
+                .insert([{
+                    campaign_id: selectedCampaignId,
+                    account_name: newEntry.name,
+                    account_domain: newEntry.domain,
+                    account_id: newEntry.accountId,
+                    is_active: true
+                }]);
+
+            if (error) {
+                alert('Error adding account: ' + error.message);
+            } else {
+                setNewEntry({ name: '', domain: '', accountId: '' });
+                setShowAddModal(false);
+                fetchList();
+            }
         }
     };
 
@@ -69,20 +90,38 @@ const AccountListManager = ({ campaigns, currentUser }) => {
         reader.onload = async (evt) => {
             const text = evt.target.result;
             const rows = text.split('\n').map(r => r.trim()).filter(Boolean);
-            // Expected format: Name,Domain,AccountID (any can be empty but not all)
-            const entries = rows.slice(1).map(row => {
+            if (rows.length < 2) {
+                alert('CSV must contain at least a header and one data row');
+                return;
+            }
+
+            // Enhanced parsing: identify columns by header names
+            const headers = rows[0].toLowerCase().split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+            const colIndex = {
+                name: headers.indexOf('account_name') !== -1 ? headers.indexOf('account_name') : headers.indexOf('name'),
+                domain: headers.indexOf('account_domain') !== -1 ? headers.indexOf('account_domain') : headers.indexOf('domain'),
+                id: headers.indexOf('account_id') !== -1 ? headers.indexOf('account_id') : headers.indexOf('id')
+            };
+
+            // Fallback for ID if not found (sometimes labeled as 'external_id' etc)
+            if (colIndex.id === -1) colIndex.id = headers.findIndex(h => h.includes('id'));
+            if (colIndex.name === -1) colIndex.name = 0; // Default to first col
+            if (colIndex.domain === -1) colIndex.domain = 1; // Default to second col
+
+            const entries = rows.slice(1).map((row, index) => {
                 const parts = row.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
-                return {
+                const entry = {
                     campaign_id: selectedCampaignId,
-                    account_name: parts[0] || null,
-                    account_domain: parts[1] || null,
-                    account_id: parts[2] || null,
+                    account_name: colIndex.name !== -1 ? (parts[colIndex.name] || null) : null,
+                    account_domain: colIndex.domain !== -1 ? (parts[colIndex.domain] || null) : null,
+                    account_id: colIndex.id !== -1 ? (parts[colIndex.id] || null) : null,
                     is_active: true
                 };
+                return entry;
             }).filter(en => en.account_name || en.account_domain || en.account_id);
 
             if (entries.length === 0) {
-                alert('No valid entries found in CSV');
+                alert('No valid entries (with name, domain, or ID) found in CSV');
                 return;
             }
 
@@ -144,7 +183,7 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                                 Bulk Upload
                             </Button>
                         </div>
-                        <Button onClick={() => setShowAddModal(true)} variant="primary" icon={Plus}>
+                        <Button onClick={() => { setEditingId(null); setNewEntry({ name: '', domain: '', accountId: '' }); setShowAddModal(true); }} variant="primary" icon={Plus}>
                             Add Account
                         </Button>
                     </div>
@@ -204,7 +243,17 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                                             <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                                                 {item.account_id || <span className="text-gray-400 italic">No ID</span>}
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setNewEntry({ name: item.account_name || '', domain: item.account_domain || '', accountId: item.account_id || '' });
+                                                        setEditingId(item.id);
+                                                        setShowAddModal(true);
+                                                    }}
+                                                    className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => handleDelete(item.id)}
                                                     className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
@@ -225,8 +274,8 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
                     <Card className="w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add Whitelist Account</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Edit Whitelist Account' : 'Add Whitelist Account'}</h3>
+                            <button onClick={() => { setShowAddModal(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
@@ -251,8 +300,8 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                             />
                             <p className="text-[10px] text-gray-500 italic">Note: A lead is accepted if it matches ANY of the provided fields above.</p>
                             <div className="flex justify-end gap-3 mt-8">
-                                <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-                                <Button type="submit">Add to Whitelist</Button>
+                                <Button variant="secondary" onClick={() => { setShowAddModal(false); setEditingId(null); }}>Cancel</Button>
+                                <Button type="submit">{editingId ? 'Save Changes' : 'Add to Whitelist'}</Button>
                             </div>
                         </form>
                     </Card>
