@@ -1332,7 +1332,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     invalidEmailCount,
                     skippedCount,
                     missingCampaignCount,
-                    rejectedLeads: rejectedRows
+                    rejectedLeads: rejectedRows,
+                    originalLeads: finalLeads // Store all successfully processed leads
                 };
 
                 setUploadResult(finalUploadResult);
@@ -1353,7 +1354,8 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                             upload_status: 'Processed',
                             employee_id: employeeId,
                             employee_name: employeeName,
-                            rejected_leads_json: finalUploadResult.rejectedLeads
+                            rejected_leads_json: finalUploadResult.rejectedLeads,
+                            original_leads_json: finalUploadResult.originalLeads
                         }]);
                     } catch (err) {
                         console.error('Error logging upload history:', err);

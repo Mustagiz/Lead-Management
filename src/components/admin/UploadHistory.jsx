@@ -75,6 +75,45 @@ const UploadHistory = ({ userId, role }) => {
         setCurrentPage(1);
     };
 
+    const downloadOriginalFile = (record) => {
+        if (!record.original_leads_json || record.original_leads_json.length === 0) {
+            alert('No original lead data available for this upload.');
+            return;
+        }
+
+        try {
+            const data = record.original_leads_json;
+            const headers = Array.from(new Set(data.flatMap(row => Object.keys(row))));
+
+            const csvRows = [
+                headers.join(","),
+                ...data.map(row => headers.map(header => {
+                    const cell = row[header] === null || row[header] === undefined ? '' : String(row[header]);
+                    return `"${cell.replace(/"/g, '""')}"`;
+                }).join(","))
+            ];
+
+            const csvContent = csvRows.join("\n");
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.style.display = 'none';
+            link.href = url;
+            link.setAttribute("download", `original_leads_${record.campaign_name || 'bulk'}_${new Date(record.created_at).getTime()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        } catch (err) {
+            console.error('Download error:', err);
+            alert('Error generating original leads file');
+        }
+    };
+
     const downloadRejectedLeads = (record) => {
         if (!record.rejected_leads_json || record.rejected_leads_json.length === 0) {
             alert('No rejected leads to download for this upload.');
@@ -264,9 +303,14 @@ const UploadHistory = ({ userId, role }) => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                                        <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                        <button
+                                            onClick={() => downloadOriginalFile(record)}
+                                            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors group/source"
+                                            title="Download Original File"
+                                        >
                                             {record.lead_source}
-                                        </span>
+                                            <Download className="w-3 h-3 opacity-0 group-hover/source:opacity-100 transition-opacity" />
+                                        </button>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center text-xs font-bold text-rose-500">
                                         {record.errors_count}
