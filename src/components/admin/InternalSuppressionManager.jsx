@@ -12,6 +12,7 @@ const InternalSuppressionManager = () => {
         totalRecords: 0,
         campaignsCovered: 0
     });
+    const [syncing, setSyncing] = useState(false);
 
     const loadRecords = async () => {
         setLoading(true);
@@ -36,6 +37,66 @@ const InternalSuppressionManager = () => {
             campaignsCovered: campaigns.size
         });
         setLoading(false);
+    };
+
+    const syncHistoricalLeads = async () => {
+        setSyncing(true);
+        try {
+            // 1. Fetch all leads
+            const { data: leads, error: leadsError } = await supabase
+                .from('leads')
+                .select('campaign, first_name, last_name, email, company_name, ra_name, created_at');
+
+            if (leadsError) throw leadsError;
+
+            // 2. Fetch existing suppression emails to avoid duplicates
+            const { data: existing, error: existingError } = await supabase
+                .from('internal_suppression_list')
+                .select('email');
+
+            if (existingError) throw existingError;
+
+            const existingEmails = new Set((existing || []).map(e => e.email.toLowerCase()));
+
+            // 3. Filter leads that aren't suppressed yet (unique by email)
+            const seenInBatch = new Set();
+            const toInsert = (leads || [])
+                .filter(l => l.email && !existingEmails.has(l.email.toLowerCase()) && !seenInBatch.has(l.email.toLowerCase()))
+                .map(l => {
+                    seenInBatch.add(l.email.toLowerCase());
+                    return {
+                        campaign_name: l.campaign || 'Historical Data',
+                        first_name: l.first_name,
+                        last_name: l.last_name,
+                        email: l.email,
+                        company: l.company_name,
+                        added_by: l.ra_name || 'System Backfill',
+                        added_at: l.created_at
+                    };
+                });
+
+            if (toInsert.length === 0) {
+                alert('No new leads to sync. Suppression list is already up to date.');
+                setSyncing(false);
+                return;
+            }
+
+            // 4. Batch insert (Supabase handles up to a few thousand well)
+            // If there's a lot, we might need chunks, but for now we'll try one batch or simple loop
+            const { error: insertError } = await supabase
+                .from('internal_suppression_list')
+                .insert(toInsert);
+
+            if (insertError) throw insertError;
+
+            alert(`Successfully synced ${toInsert.length} historical leads to the suppression list!`);
+            loadRecords();
+        } catch (err) {
+            console.error('Sync failed:', err);
+            alert('Failed to sync leads: ' + err.message);
+        } finally {
+            setSyncing(false);
+        }
     };
 
     useEffect(() => {
@@ -117,6 +178,16 @@ const InternalSuppressionManager = () => {
                         />
                     </div>
                     <div className="flex gap-2 w-full md:w-auto">
+                        <Button
+                            variant="secondary"
+                            onClick={syncHistoricalLeads}
+                            disabled={syncing}
+                            isLoading={syncing}
+                            icon={RefreshCw}
+                            className="flex-1 md:flex-none border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
+                        >
+                            Sync Historical Leads
+                        </Button>
                         <Button variant="ghost" onClick={loadRecords} icon={RefreshCw} className="flex-1 md:flex-none">
                             Refresh
                         </Button>
