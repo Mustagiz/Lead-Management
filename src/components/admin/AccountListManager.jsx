@@ -12,6 +12,7 @@ const AccountListManager = ({ campaigns, currentUser }) => {
     const [newEntry, setNewEntry] = useState({ name: '', domain: '', accountId: '' });
     const [editingId, setEditingId] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
     const [selectedIds, setSelectedIds] = useState([]);
     const [showBulkEditModal, setShowBulkEditModal] = useState(false);
     const [bulkEditData, setBulkEditData] = useState({ name: '', domain: '', accountId: '' });
@@ -20,22 +21,38 @@ const AccountListManager = ({ campaigns, currentUser }) => {
     const fetchList = useCallback(async () => {
         if (!selectedCampaignId) {
             setList([]);
+            setTotalCount(0);
             return;
         }
         setIsLoading(true);
-        const { data, error } = await supabase
+
+        const from = (currentPage - 1) * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE - 1;
+
+        let query = supabase
             .from('campaign_account_list')
-            .select('*')
+            .select('*', { count: 'exact' })
             .eq('campaign_id', selectedCampaignId)
-            .order('added_at', { ascending: false });
+            .order('added_at', { ascending: false })
+            .range(from, to);
+
+        if (searchTerm) {
+            query = query.or(`account_name.ilike.%${searchTerm}%,account_domain.ilike.%${searchTerm}%,account_id.ilike.%${searchTerm}%`);
+        }
+
+        const { data, count, error } = await query;
 
         if (!error) {
             setList(data || []);
-            setCurrentPage(1);
+            setTotalCount(count || 0);
             setSelectedIds([]);
         }
         setIsLoading(false);
-    }, [selectedCampaignId]);
+    }, [selectedCampaignId, currentPage, searchTerm]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedCampaignId, searchTerm]);
 
     useEffect(() => {
         fetchList();
@@ -133,10 +150,10 @@ const AccountListManager = ({ campaigns, currentUser }) => {
     };
 
     const toggleSelectAll = () => {
-        if (selectedIds.length === paginatedList.length && paginatedList.length > 0) {
+        if (selectedIds.length === list.length && list.length > 0) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(paginatedList.map(item => item.id));
+            setSelectedIds(list.map(item => item.id));
         }
     };
 
@@ -223,19 +240,7 @@ const AccountListManager = ({ campaigns, currentUser }) => {
         a.click();
     };
 
-    const filteredList = list.filter(item =>
-        (item.account_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.account_domain || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.account_id || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const paginatedList = filteredList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-    const totalPages = Math.ceil(filteredList.length / ITEMS_PER_PAGE);
-
-    useEffect(() => {
-        setCurrentPage(1);
-        setSelectedIds([]);
-    }, [searchTerm]);
+    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
     return (
         <div className="space-y-6">
@@ -330,7 +335,7 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                                     <th className="px-6 py-4 text-left">
                                         <input
                                             type="checkbox"
-                                            checked={selectedIds.length === paginatedList.length && paginatedList.length > 0}
+                                            checked={selectedIds.length === list.length && list.length > 0}
                                             onChange={toggleSelectAll}
                                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
@@ -343,9 +348,9 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                                 {isLoading ? (
-                                    <tr><td colSpan="4" className="px-6 py-10 text-center text-gray-500">Loading accounts...</td></tr>
+                                    <tr><td colSpan="5" className="px-6 py-10 text-center text-gray-500">Loading accounts...</td></tr>
                                 ) : (
-                                    paginatedList.map(item => (
+                                    list.map(item => (
                                         <tr key={item.id} className={`hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors ${selectedIds.includes(item.id) ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <input
@@ -390,9 +395,12 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                     </div>
                     {totalPages > 1 && (
                         <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between bg-gray-50/30 dark:bg-slate-800/10">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Page {currentPage} of {totalPages}
-                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                                <span className="text-[10px] text-gray-400">Total Accounts: {totalCount}</span>
+                            </div>
                             <div className="flex gap-2">
                                 <Button variant="secondary" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="py-1 px-4 text-xs font-bold">Prev</Button>
                                 <Button variant="secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="py-1 px-4 text-xs font-bold">Next</Button>
