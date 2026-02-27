@@ -15,6 +15,7 @@ import AdminBreakHistoryModal from '../modals/AdminBreakHistoryModal';
 import LiveFeedTicker from '../common/LiveFeedTicker';
 import SuppressionListManager from '../admin/SuppressionListManager';
 import AccountListManager from '../admin/AccountListManager';
+import InternalSuppressionManager from '../admin/InternalSuppressionManager';
 
 const AdminDashboard = () => {
     const { currentUser } = useAuth();
@@ -468,6 +469,8 @@ const AdminDashboard = () => {
                         { id: 'accounts', icon: Shield, label: 'Account List' },
                         { id: 'breaks', icon: Coffee, label: 'Breaks' },
                         { id: 'reports', icon: BarChart3, label: 'Reports' },
+                        { id: 'internal_suppression', icon: Shield, label: 'Internal Suppression' },
+                        { id: 'monitoring', icon: Coffee, label: 'Break Monitoring' },
                     ].map(tab => (
                         <Button
                             key={tab.id}
@@ -869,6 +872,20 @@ const AdminDashboard = () => {
 
             {activeTab === 'pipeline' && (
                 <LeadPipelineView leads={leads} users={users} />
+            )}
+
+            {activeTab === 'internal_suppression' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <InternalSuppressionManager />
+                </div>
+            )}
+
+            {activeTab === 'monitoring' && (
+                <div className="space-y-6">
+                    {/* This section would contain content for Break Monitoring, if different from 'breaks' tab */}
+                    {/* For now, it's an empty placeholder or could reuse the 'breaks' content if desired */}
+                    <p>Break Monitoring content goes here.</p>
+                </div>
             )}
 
             {activeTab === 'reports' && (

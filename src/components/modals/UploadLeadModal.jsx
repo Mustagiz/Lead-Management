@@ -598,7 +598,21 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
         return /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(phone);
     };
 
-    const validateLead = (lead) => {
+    const validateLead = async (lead) => {
+        // 0. Internal Suppression List (Global) Check
+        if (lead.email) {
+            const { data: internalMatch } = await supabase
+                .from('internal_suppression_list')
+                .select('campaign_name, email')
+                .eq('email', lead.email.toLowerCase())
+                .limit(1)
+                .maybeSingle();
+
+            if (internalMatch) {
+                return { status: 'rejected', reason: `Internal suppression match (matched: ${lead.email} (${internalMatch.campaign_name}))` };
+            }
+        }
+
         // 1. Suppression List Check
         const email = (lead.email || '').toLowerCase();
         const phone = (lead.phone_no || lead.phone || '').replace(/\D/g, '');
@@ -694,7 +708,7 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
 
         const submitData = async () => {
             // New Suppression & Account List Validation
-            const validation = validateLead(formData);
+            const validation = await validateLead(formData);
             if (validation.status === 'rejected') {
                 setErrors(prev => ({ ...prev, general: validation.reason }));
                 alert(`Lead rejected: ${validation.reason}`);
@@ -732,6 +746,15 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     alert('Error creating lead: ' + error.message);
                     return;
                 }
+                // Auto-populate Internal Suppression List
+                await supabase.from('internal_suppression_list').insert([{
+                    campaign_name: formData.campaign,
+                    first_name: formData.first_name,
+                    last_name: formData.last_name,
+                    email: formData.email.toLowerCase(),
+                    company: formData.company_name,
+                    added_by: employeeName
+                }]);
             }
             onSuccess();
             onClose();
@@ -1232,9 +1255,14 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     }
 
                     // New Suppression & Account List Validation
-                    const validation = validateLead(nl);
+                    const validation = await validateLead(nl);
                     if (validation.status === 'rejected') {
-                        if (validation.reason.includes('Suppression')) {
+                        if (validation.reason.includes('Internal suppression')) {
+                            // No specific counter for internal suppression in the existing report UI, 
+                            // but we can add it or group it with suppressionMatchCount. 
+                            // Let's increment suppressionMatchCount for now.
+                            suppressionMatchCount++;
+                        } else if (validation.reason.includes('Suppression')) {
                             suppressionMatchCount++;
                         } else if (validation.reason.includes('Account')) {
                             invalidAccountCount++;
@@ -1278,6 +1306,18 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                     const cleanBatch = batch.map(({ _originalColumns, ...rest }) => rest);
                     const { error } = await supabase.from('leads').insert(cleanBatch);
                     if (error) { alert(`Error inserting records: ${error.message}`); return; }
+
+                    // Auto-populate Internal Suppression List for bulk inserts
+                    const suppressionEntries = batch.map(l => ({
+                        campaign_name: l.campaign,
+                        first_name: l.first_name,
+                        last_name: l.last_name,
+                        email: l.email.toLowerCase(),
+                        company: l.company_name,
+                        added_by: employeeName
+                    }));
+                    await supabase.from('internal_suppression_list').insert(suppressionEntries);
+
                     successCount += batch.length;
                 }
 

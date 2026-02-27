@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { formatDisplayDate } from '../../utils/dateUtils';
 import { Button, Input, SearchableSelect, Card, Badge, StatCard } from '../common/UIComponents';
 import UploadLeadModal from '../modals/UploadLeadModal';
+import InternalSuppressionManager from '../admin/InternalSuppressionManager';
 
 const EmployeeDashboard = () => {
     const { currentUser } = useAuth();
@@ -279,27 +280,29 @@ const EmployeeDashboard = () => {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50 flex-1">
-                    <Button
-                        variant={activeTab === 'leads' ? 'primary' : 'ghost'}
-                        onClick={() => setActiveTab('leads')}
-                        className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'leads' ? 'shadow-lg shadow-indigo-500/20' : ''}`}
-                        icon={Users}
-                    >
+                    <button onClick={() => setActiveTab('leads')} className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'leads' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
+                        <Users className="w-5 h-5" />
                         My Leads
-                    </Button>
-                    <Button
-                        variant={activeTab === 'breaks' ? 'primary' : 'ghost'}
-                        onClick={() => setActiveTab('breaks')}
-                        className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === 'breaks' ? 'shadow-lg shadow-purple-500/20' : ''}`}
-                        icon={Coffee}
-                    >
+                    </button>
+                    <button onClick={() => setActiveTab('internal_suppression')} className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'internal_suppression' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
+                        <Shield className="w-5 h-5" />
+                        Internal Suppression
+                    </button>
+                    <button onClick={() => setActiveTab('breaks')} className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'breaks' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
+                        <Coffee className="w-5 h-5" />
                         Break Management
-                    </Button>
+                    </button>
                 </div>
                 <Button onClick={() => setShowUploadModal(true)} variant="primary" className="w-full md:w-auto px-8 shadow-indigo-500/20" icon={Plus}>
                     Upload New Lead
                 </Button>
             </div>
+
+            {activeTab === 'internal_suppression' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <InternalSuppressionManager />
+                </div>
+            )}
 
             {activeTab === 'leads' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
