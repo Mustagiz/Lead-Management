@@ -206,9 +206,12 @@ const UploadHistory = ({ userId, role }) => {
                 <table className="w-full text-left">
                     <thead>
                         <tr className="bg-gray-100/50 dark:bg-slate-800/50 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-gray-100 dark:border-slate-800">
-                            <th className="px-6 py-4">ID</th>
+                            {role === 'admin' ? (
+                                <th className="px-6 py-4">Employee/RA</th>
+                            ) : (
+                                <th className="px-6 py-4">ID</th>
+                            )}
                             <th className="px-6 py-4">Uploaded Date</th>
-                            {role === 'admin' && <th className="px-6 py-4">Employee/RA</th>}
                             <th className="px-6 py-4">File name</th>
                             <th className="px-6 py-4 text-center">Source</th>
                             <th className="px-6 py-4 text-center">Errors</th>
@@ -225,12 +228,12 @@ const UploadHistory = ({ userId, role }) => {
                         {isLoading ? (
                             Array.from({ length: 5 }).map((_, i) => (
                                 <tr key={i} className="animate-pulse">
-                                    <td colSpan={role === 'admin' ? 13 : 12} className="px-6 py-4"><div className="h-4 bg-gray-100 dark:bg-slate-800 rounded w-full"></div></td>
+                                    <td colSpan="12" className="px-6 py-4"><div className="h-4 bg-gray-100 dark:bg-slate-800 rounded w-full"></div></td>
                                 </tr>
                             ))
                         ) : history.length === 0 ? (
                             <tr>
-                                <td colSpan={role === 'admin' ? 13 : 12} className="px-6 py-12 text-center text-slate-400">
+                                <td colSpan="12" className="px-6 py-12 text-center text-slate-400">
                                     <Clock className="w-12 h-12 mx-auto mb-3 opacity-20" />
                                     <p>No upload history found.</p>
                                 </td>
@@ -238,19 +241,20 @@ const UploadHistory = ({ userId, role }) => {
                         ) : (
                             history.map((record) => (
                                 <tr key={record.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition-colors group">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-[11px] font-mono text-slate-400 bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-700">
-                                            {record.id.split('-')[0].toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-600 dark:text-slate-300 font-medium">
-                                        {formatDate(record.created_at)}
-                                    </td>
-                                    {role === 'admin' && (
+                                    {role === 'admin' ? (
                                         <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-indigo-600 dark:text-indigo-400">
                                             {record.employee_name || 'System'}
                                         </td>
+                                    ) : (
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="text-[11px] font-mono text-slate-400 bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-700">
+                                                {record.id.split('-')[0].toUpperCase()}
+                                            </span>
+                                        </td>
                                     )}
+                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                        {formatDate(record.created_at)}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex flex-col">
                                             <span className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-[200px]" title={record.file_name}>
