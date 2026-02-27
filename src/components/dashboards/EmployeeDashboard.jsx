@@ -280,18 +280,21 @@ const EmployeeDashboard = () => {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex flex-wrap gap-2 p-1.5 glass rounded-2xl shadow-sm border border-white/20 dark:border-slate-800/50 flex-1">
-                    <button onClick={() => setActiveTab('leads')} className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'leads' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
-                        <Users className="w-5 h-5" />
-                        My Leads
-                    </button>
-                    <button onClick={() => setActiveTab('internal_suppression')} className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'internal_suppression' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
-                        <Shield className="w-5 h-5" />
-                        Internal Suppression
-                    </button>
-                    <button onClick={() => setActiveTab('breaks')} className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'breaks' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
-                        <Coffee className="w-5 h-5" />
-                        Break Management
-                    </button>
+                    {[
+                        { id: 'leads', icon: Users, label: 'My Leads' },
+                        { id: 'internal_suppression', icon: Shield, label: 'Internal Suppression' },
+                        { id: 'breaks', icon: Coffee, label: 'Break Management' },
+                    ].map(tab => (
+                        <Button
+                            key={tab.id}
+                            variant={activeTab === tab.id ? 'primary' : 'ghost'}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex-1 md:flex-none py-2 rounded-xl text-sm ${activeTab === tab.id ? 'shadow-lg shadow-indigo-500/20' : ''}`}
+                            icon={tab.icon}
+                        >
+                            {tab.label}
+                        </Button>
+                    ))}
                 </div>
                 <Button onClick={() => setShowUploadModal(true)} variant="primary" className="w-full md:w-auto px-8 shadow-indigo-500/20" icon={Plus}>
                     Upload New Lead
