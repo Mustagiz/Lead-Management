@@ -79,14 +79,29 @@ export const Select = ({ label, options, error, ...props }) => (
 
 export const SearchableSelect = ({ label, value, onChange, options, placeholder, error }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+
+    const selectedOption = options.find(opt => String(opt.value) === String(value));
+    const displayValue = isOpen ? search : (selectedOption ? selectedOption.label : search);
 
     const filteredOptions = options.filter(opt =>
-        (opt.label || '').toLowerCase().includes((value || '').toLowerCase())
+        String(opt.label || '').toLowerCase().includes(search.toLowerCase()) ||
+        String(opt.value || '').toLowerCase().includes(search.toLowerCase())
     );
 
     const handleSelect = (selectedValue) => {
         onChange({ target: { value: selectedValue } });
+        setSearch('');
         setIsOpen(false);
+    };
+
+    const handleInputChange = (e) => {
+        setSearch(e.target.value);
+        if (!isOpen) setIsOpen(true);
+        // We don't call the parent onChange immediately on every keystroke if it's for searching
+        // but the current dashboards expect the parent to handle the value.
+        // To avoid breaking existing logic, we still call it.
+        onChange(e);
     };
 
     return (
@@ -97,10 +112,16 @@ export const SearchableSelect = ({ label, value, onChange, options, placeholder,
                     type="text"
                     className={`w-full px-4 py-3 bg-white dark:bg-slate-900/50 border dark:border-slate-800 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none shadow-sm text-slate-900 dark:text-slate-100 ${error ? 'border-rose-500' : 'border-slate-200 dark:border-slate-800'}`}
                     placeholder={placeholder}
-                    value={value}
-                    onChange={onChange}
-                    onFocus={() => setIsOpen(true)}
-                    onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+                    value={displayValue}
+                    onChange={handleInputChange}
+                    onFocus={() => {
+                        setIsOpen(true);
+                        setSearch('');
+                    }}
+                    onBlur={() => setTimeout(() => {
+                        setIsOpen(false);
+                        setSearch('');
+                    }, 200)}
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                     <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
@@ -112,7 +133,7 @@ export const SearchableSelect = ({ label, value, onChange, options, placeholder,
                     <ul className="max-h-60 overflow-y-auto py-2">
                         {filteredOptions.map(opt => (
                             <li
-                                key={opt.value}
+                                key={String(opt.value)}
                                 className="px-4 py-2.5 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-600 transition-colors cursor-pointer text-slate-700 dark:text-slate-300 text-sm font-medium"
                                 onClick={() => handleSelect(opt.value)}
                             >
