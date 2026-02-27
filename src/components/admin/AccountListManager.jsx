@@ -288,18 +288,26 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                 <Card className="overflow-hidden">
                     <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50/50 dark:bg-slate-800/30">
                         <div className="relative w-full md:w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search accounts..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 text-sm bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
-                            />
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">Filter Records</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search accounts..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 text-sm bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                />
+                            </div>
                         </div>
-                        <button onClick={downloadTemplate} className="text-xs text-indigo-600 font-bold flex items-center gap-1 hover:underline">
-                            <Download className="w-3 h-3" /> Download Template
-                        </button>
+                        <div className="flex gap-4 items-center">
+                            <button onClick={handleDeleteAll} className="text-xs text-rose-600 font-bold flex items-center gap-1 hover:underline">
+                                <Trash2 className="w-3 h-3" /> Delete All Records
+                            </button>
+                            <button onClick={downloadTemplate} className="text-xs text-indigo-600 font-bold flex items-center gap-1 hover:underline">
+                                <Download className="w-3 h-3" /> Download Template
+                            </button>
+                        </div>
                     </div>
 
                     {selectedIds.length > 0 && (
@@ -308,11 +316,10 @@ const AccountListManager = ({ campaigns, currentUser }) => {
                                 <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{selectedIds.length} selected</span>
                                 <div className="h-4 w-px bg-indigo-200 dark:bg-indigo-800/30" />
                                 <div className="flex gap-2">
-                                    <button onClick={() => setShowBulkEditModal(true)} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline">Bulk Edit</button>
-                                    <button onClick={handleBulkDelete} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline">Delete Selected</button>
+                                    <button onClick={() => setShowBulkEditModal(true)} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline px-2 py-1 rounded hover:bg-indigo-100/50">Bulk Edit</button>
+                                    <button onClick={handleBulkDelete} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline px-2 py-1 rounded hover:bg-rose-100/50">Delete Selected</button>
                                 </div>
                             </div>
-                            <button onClick={handleDeleteAll} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline">Delete All Records</button>
                         </div>
                     )}
 

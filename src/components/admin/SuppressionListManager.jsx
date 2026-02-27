@@ -290,18 +290,26 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                 <Card className="overflow-hidden">
                     <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50/50 dark:bg-slate-800/30">
                         <div className="relative w-full md:w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search list..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 text-sm bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
-                            />
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">Filter Records</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search list..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 text-sm bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                />
+                            </div>
                         </div>
-                        <button onClick={downloadTemplate} className="text-xs text-indigo-600 font-bold flex items-center gap-1 hover:underline">
-                            <Download className="w-3 h-3" /> Download Template
-                        </button>
+                        <div className="flex gap-4 items-center">
+                            <button onClick={handleDeleteAll} className="text-xs text-rose-600 font-bold flex items-center gap-1 hover:underline">
+                                <Trash2 className="w-3 h-3" /> Delete All Records
+                            </button>
+                            <button onClick={downloadTemplate} className="text-xs text-indigo-600 font-bold flex items-center gap-1 hover:underline">
+                                <Download className="w-3 h-3" /> Download Template
+                            </button>
+                        </div>
                     </div>
 
                     {selectedIds.length > 0 && (
@@ -310,11 +318,10 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                                 <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{selectedIds.length} selected</span>
                                 <div className="h-4 w-px bg-indigo-200 dark:bg-indigo-800/30" />
                                 <div className="flex gap-2">
-                                    <button onClick={() => setShowBulkEditModal(true)} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline">Bulk Edit</button>
-                                    <button onClick={handleBulkDelete} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline">Delete Selected</button>
+                                    <button onClick={() => setShowBulkEditModal(true)} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline px-2 py-1 rounded hover:bg-indigo-100/50">Bulk Edit</button>
+                                    <button onClick={handleBulkDelete} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline px-2 py-1 rounded hover:bg-rose-100/50">Delete Selected</button>
                                 </div>
                             </div>
-                            <button onClick={handleDeleteAll} className="text-xs font-bold text-rose-600 hover:text-rose-700 underline">Delete All Records</button>
                         </div>
                     )}
 
@@ -397,77 +404,82 @@ const SuppressionListManager = ({ campaigns, currentUser }) => {
                         </div>
                     )}
                 </Card>
-            )}
+            )
+            }
 
-            {showBulkEditModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-                    <Card className="w-full max-w-sm p-6 animate-in zoom-in-95 duration-200">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Bulk Edit Type</h3>
-                            <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">New Type</label>
-                                <select
-                                    value={bulkEditType}
-                                    onChange={(e) => setBulkEditType(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                >
-                                    <option value="email">Email</option>
-                                    <option value="phone">Phone</option>
-                                    <option value="domain">Domain</option>
-                                </select>
+            {
+                showBulkEditModal && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+                        <Card className="w-full max-w-sm p-6 animate-in zoom-in-95 duration-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Bulk Edit Type</h3>
+                                <button onClick={() => setShowBulkEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-6 h-6" />
+                                </button>
                             </div>
-                            <div className="flex justify-end gap-3 mt-8">
-                                <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>Cancel</Button>
-                                <Button onClick={handleBulkEdit}>Apply to {selectedIds.length} items</Button>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">New Type</label>
+                                    <select
+                                        value={bulkEditType}
+                                        onChange={(e) => setBulkEditType(e.target.value)}
+                                        className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                    >
+                                        <option value="email">Email</option>
+                                        <option value="phone">Phone</option>
+                                        <option value="domain">Domain</option>
+                                    </select>
+                                </div>
+                                <div className="flex justify-end gap-3 mt-8">
+                                    <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>Cancel</Button>
+                                    <Button onClick={handleBulkEdit}>Apply to {selectedIds.length} items</Button>
+                                </div>
                             </div>
-                        </div>
-                    </Card>
-                </div>
-            )}
+                        </Card>
+                    </div>
+                )
+            }
 
-            {showAddModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-                    <Card className="w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Edit Entry' : 'Add Entry'}</h3>
-                            <button onClick={() => { setShowAddModal(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleAdd} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Type</label>
-                                <select
-                                    value={newEntry.type}
-                                    onChange={(e) => setNewEntry({ ...newEntry, type: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                >
-                                    <option value="email">Email</option>
-                                    <option value="phone">Phone</option>
-                                    <option value="domain">Domain</option>
-                                </select>
+            {
+                showAddModal && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+                        <Card className="w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Edit Entry' : 'Add Entry'}</h3>
+                                <button onClick={() => { setShowAddModal(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-6 h-6" />
+                                </button>
                             </div>
-                            <Input
-                                label="Identifier Value"
-                                placeholder={newEntry.type === 'email' ? 'e.g. user@competitor.com' : newEntry.type === 'domain' ? 'e.g. competitor.com' : 'e.g. +1234567890'}
-                                value={newEntry.value}
-                                onChange={(e) => setNewEntry({ ...newEntry, value: e.target.value })}
-                                required
-                            />
-                            <div className="flex justify-end gap-3 mt-8">
-                                <Button variant="secondary" onClick={() => { setShowAddModal(false); setEditingId(null); }}>Cancel</Button>
-                                <Button type="submit">{editingId ? 'Save Changes' : 'Add to List'}</Button>
-                            </div>
-                        </form>
-                    </Card>
-                </div>
-            )}
-        </div>
+                            <form onSubmit={handleAdd} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                                    <select
+                                        value={newEntry.type}
+                                        onChange={(e) => setNewEntry({ ...newEntry, type: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                    >
+                                        <option value="email">Email</option>
+                                        <option value="phone">Phone</option>
+                                        <option value="domain">Domain</option>
+                                    </select>
+                                </div>
+                                <Input
+                                    label="Identifier Value"
+                                    placeholder={newEntry.type === 'email' ? 'e.g. user@competitor.com' : newEntry.type === 'domain' ? 'e.g. competitor.com' : 'e.g. +1234567890'}
+                                    value={newEntry.value}
+                                    onChange={(e) => setNewEntry({ ...newEntry, value: e.target.value })}
+                                    required
+                                />
+                                <div className="flex justify-end gap-3 mt-8">
+                                    <Button variant="secondary" onClick={() => { setShowAddModal(false); setEditingId(null); }}>Cancel</Button>
+                                    <Button type="submit">{editingId ? 'Save Changes' : 'Add to List'}</Button>
+                                </div>
+                            </form>
+                        </Card>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 
