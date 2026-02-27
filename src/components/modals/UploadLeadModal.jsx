@@ -1160,7 +1160,20 @@ const UploadLeadModal = ({ onClose, onSuccess, employeeId, employeeName, leadToE
                 }
 
                 if (newLeads.length === 0) {
-                    alert(`No valid leads found to import.`);
+                    setUploadResult({
+                        totalRows: rows.length - 1,
+                        successCount: 0,
+                        dbDuplicateCount: 0,
+                        internalDuplicateCount,
+                        campaignDuplicateCount: 0,
+                        suppressionMatchCount: 0,
+                        invalidAccountCount: 0,
+                        invalidEmailCount,
+                        skippedCount,
+                        missingCampaignCount,
+                        rejectedLeads: rejectedRows
+                    });
+                    onSuccess();
                     return;
                 }
 
